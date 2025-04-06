@@ -1,0 +1,234 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="loader.css">
+<link rel="stylesheet" href="style.css">
+<style>
+    body { background: #fff; color: #333; }
+    #paymentSection , #loader { display: none; }
+    .payment-button > img { width: 40px; height: 40px; border-radius: 125px; }
+    .payment-button > span { font-size: 12px; }
+    .payment-methods { display: flex; justify-content: space-around; }
+    .payment-button { display: flex; align-items: center; justify-content: center; background: transparent; flex-direction: column; width: 75px; padding: 8px; border: 1px solid #12595c; gap: 10px; color: #333; border-radius: 12px; cursor: pointer; }
+    .active { background: #00008b; color: #fff }
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Roboto:wght@300;400;500&display=swap');
+    #paymentSection { flex-direction: column; max-width: 450px; margin: 15px; padding: 25px; background: linear-gradient(to bottom, #1a2733, #131e29); border-radius: 8px; border: 1px solid #3d9eff; box-shadow: 0 0 20px rgba(61, 158, 255, 0.2), 
+              0 0 40px rgba(0, 0, 0, 0.5); color: #fff; }
+    #paymentSection h3 { font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700; text-align: center; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; color: #3d9eff; position: relative; padding-bottom: 10px; }
+    #paymentSection h3::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(to right, transparent, #3d9eff, transparent); }
+    #paymentSection p { margin-bottom: 15px; padding: 12px 15px; background-color: rgba(30, 45, 60, 0.6); border-radius: 6px; border-left: 3px solid #3d9eff; font-size: 16px; display: flex; justify-content: space-between; } 
+    #paymentSection b { color: #3d9eff; font-weight: 500; } 
+    #paymentSection span { font-family: 'Rajdhani', sans-serif; font-weight: 600; letter-spacing: 1px; } 
+    #timer { color: #ff7e5f; font-weight: 700 !important; font-size: 18px; animation: pulse 1.5s infinite; } 
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } } 
+    #qrCode { display: flex; align-items: center; overflow: hidden; justify-content: center; background-color: white; padding: 15px; width: 200px;  height: 200px; margin: 15px auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); position: relative; } 
+    #qrCode::before { content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px; background: linear-gradient(45deg, #3d9eff, #00c6ff, #3d9eff); z-index: -1; border-radius: 10px; animation: border-glow 3s infinite linear; } 
+    @keyframes border-glow { 0% { filter: blur(3px); } 50% { filter: blur(5px); } 100% { filter: blur(3px); } } 
+    label { display: block; margin-bottom: 8px; color: #3d9eff; font-weight: 500; } 
+    input[type="file"] { display: block; width: 100%; padding: 10px; margin-bottom: 15px; border: 2px dashed #3d9eff; border-radius: 6px; background-color: rgba(61, 158, 255, 0.1); color: #ffffff; cursor: pointer; transition: all 0.3s ease; } 
+    input[type="file"]:hover { background-color: rgba(61, 158, 255, 0.2); border-color: #00c6ff; } 
+    .done { background: linear-gradient(45deg, #3d9eff, #00c6ff); border: none; border-radius: 4px; color: white; font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 12px 20px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); position: relative; overflow: hidden; } 
+    .done::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent); transition: all 0.5s ease; } 
+    .done:hover { transform: translateY(-3px); box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3); } 
+    .done:hover::before { left: 100%; } 
+    .done:active { transform: translateY(1px); }
+    input[type="file"]::file-selector-button { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 14px; color: white; background: linear-gradient(45deg, #3d9eff, #00c6ff); padding: 8px 16px; border: none; border-radius: 4px; margin-right: 15px; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2); } 
+    input[type="file"]::file-selector-button:hover { background: linear-gradient(45deg, #00c6ff, #3d9eff); transform: translateY(-2px); box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3); } 
+    input[type="file"]::file-selector-button:active { transform: translateY(0); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
+    .balance > p { display: flex; flex-direction: column-reverse; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; }
+    .balance { display: flex; flex-direction: column-reverse; padding: 10px; margin: 10px; border-radius: 12px; background: #eee; color: #000; }
+    #userCoins { font-size: 22px; font-weight: bolder; }
+    .image { margin: 30px 0 0 0; }
+    .coins { display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .coins > img { width: 25px; }
+    .int { background: #eee; color: #333; font-weight: 450; }
+    .int::placeholder { color: #333; font-weight: 450; }
+</style>
+<div id="details" class="form">
+    <div class="image">
+        <img src="https://i.ibb.co/spRWqGT9/add-coins.png">
+    </div>
+    <div class="balance">
+        <p>Balance <div class="coins"><img src="https://cdn.pixabay.com/photo/2014/12/21/23/57/money-576443_1280.png"><span id="userCoins"></span></p></div>
+        <span id="userEmail" style="display: none;"></span>
+    </div>
+    <label>Enter Amount:</label>
+    <input type="number" id="amount" placeholder="Enter Amount:" class="int" required>
+    <label>Select Payment Method:</label>
+    <div class="payment-methods">
+        <div class="payment-button" onclick="selectPaymentMethod(this, 'PhonePe')">
+            <img src="https://docstore.indusappstore.com/public/external/indus-images/preview_images/ff94b7c6bde7158c344cde5bdad38628.png"> 
+            <span>PhonePe</span>
+        </div>
+        <div class="payment-button" onclick="selectPaymentMethod(this, 'GPay')">
+            <img src="https://img.icons8.com/color/512/google-pay.png">
+            <span>Google Pay</span>
+        </div>
+        <div class="payment-button" onclick="selectPaymentMethod(this, 'Other')">
+            <img src="https://img.icons8.com/color/512/bhim.png">
+            <span>Other</span>
+        </div>
+    </div>
+    <button onclick="showPaymentSection()" class="btn">Proceed To Pay</button>
+</div>
+<div id="paymentSection">
+    <h3>Scan & Pay</h3>
+    <p><b>Merchant Name:</b> <span id="merchantName"></span></p>
+    <p><b>UPI ID:</b> <span id="upiID"></span></p>
+    <p><b>Transaction ID:</b> <span id="transactionID"></span></p>
+    <p><b>Time Left:</b> <span id="timer">5:00</span></p>
+    <div id="qrCode"></div><br>
+
+    <label for="proof">Upload Payment Proof:</label>
+    <input type="file" id="proof"><br><br>
+
+    <button onclick="submitPayment()" class="done">Done</button>
+</div>
+
+<div id="loader"><div class="loader"></div></div>
+
+<script>
+    let selectedPaymentMethod = "";
+
+    function showLoader() {
+        document.getElementById("loader").style.display = "flex";
+    }
+
+    function hideLoader() {
+        document.getElementById("loader").style.display = "none";
+    }
+
+    function selectPaymentMethod(element, method) {
+        selectedPaymentMethod = method;
+        document.querySelectorAll(".payment-button").forEach(button => button.classList.remove("active"));
+        element.classList.add("active");
+    }
+
+    function showPaymentSection() {
+        let amount = document.getElementById("amount").value;
+        let email = localStorage.getItem("quiz_local");
+
+        if (!email) {
+            alert("User not logged in!");
+            return;
+        }
+        if (!amount || amount <= 0) {
+            alert("Please enter a valid amount!");
+            return;
+        }
+        if (!selectedPaymentMethod) {
+            alert("Please select a payment method!");
+            return;
+        }
+
+        showLoader();
+
+        fetch("https://script.google.com/macros/s/AKfycbzSMX-4T96vfea_0IfmTOpG9EyjwkwtFETayRRTk-MXKDMase6RoNHAEQxe4xwPJjrE/exec", {
+            method: "POST",
+            body: JSON.stringify({ action: "fetchUPI" })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("merchantName").innerText = data.merchantName;
+            document.getElementById("upiID").innerText = data.upiID;
+
+            let transactionID = generateTransactionID();
+            document.getElementById("transactionID").innerText = transactionID;
+
+            let qrData = `upi://pay?pa=${data.upiID}&pn=${data.merchantName}&am=${amount}&cu=INR`;
+            document.getElementById("qrCode").innerHTML = ""; 
+            new QRCode(document.getElementById("qrCode"), qrData);
+
+            startTimer();
+            document.getElementById("details").style.display = "none";
+            document.getElementById("paymentSection").style.display = "flex";
+        })
+        .catch(error => {
+            alert("Error fetching UPI details!");
+        })
+        .finally(() => {
+            hideLoader();
+        });
+    }
+
+    function generateTransactionID() {
+        let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let transactionID = "";
+        for (let i = 0; i < 10; i++) {
+            transactionID += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return transactionID;
+    }
+
+    function startTimer() {
+        let time = 300;
+        let timerElement = document.getElementById("timer");
+        let interval = setInterval(() => {
+            let minutes = Math.floor(time / 60);
+            let seconds = time % 60;
+            timerElement.innerText = `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+            if (time-- <= 0) clearInterval(interval);
+        }, 1000);
+    }
+
+    function submitPayment() {
+        let email = localStorage.getItem("quiz_local");
+        let amount = document.getElementById("amount").value;
+        let transactionID = document.getElementById("transactionID").innerText;
+        let proof = document.getElementById("proof").files[0];
+
+        if (!proof) {
+            alert("Please upload a payment proof!");
+            return;
+        }
+
+        let formData = new FormData();
+        formData.append("image", proof);
+
+        showLoader();
+
+        fetch("https://api.imgbb.com/1/upload?key=5fe39bb36e695f349dfb9305d1bcbf62", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            let imageUrl = data.data.url;
+            sendPaymentData(email, selectedPaymentMethod, transactionID, amount, imageUrl);
+        })
+        .catch(error => {
+            alert("Image upload failed!");
+        })
+        .finally(() => {
+            hideLoader();
+        });
+    }
+
+    function sendPaymentData(email, paymentMethod, transactionID, amount, imageUrl) {
+        fetch("https://script.google.com/macros/s/AKfycbzSMX-4T96vfea_0IfmTOpG9EyjwkwtFETayRRTk-MXKDMase6RoNHAEQxe4xwPJjrE/exec", {
+            method: "POST",
+            body: JSON.stringify({
+                action: "submitPayment",
+                email,
+                paymentMethod,
+                transactionID,
+                amount,
+                imageUrl
+            })
+        })
+        .then(response => response.text())
+        .then(data => {
+            if (data === "Success") {
+                alert("Payment submitted successfully!");
+                window.location.href = "index.html";
+            } else {
+                alert("Payment submission failed!");
+            }
+        })
+        .finally(() => {
+            hideLoader();
+        });
+    }
+</script>
+<script src="script.js"></script>

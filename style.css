@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Quicksand:wght@300..700&display=swap');
+* { margin: 0; padding: 0; overflow-x: hidden; }
+body { background: #fff; color: #fff; font-family: "Quicksand", sans-serif; }
+.form { display: flex; gap: 10px; justify-content: center; flex-direction: column; padding: 20px; }
+.form-h2 { font-size: 24px; font-weight: 500; }
+.form-p { margin: 0; font-size: 18px; font-weight: 600; }
+.image { display: flex; align-items: center; justify-content: center; margin: 100px 0 0 0; }
+.link { text-align: center; }
+.btn { font-family: "Inter", sans-serif; }
+.image > img { width: 220px; }
+.int::placeholder { color: #fff; font-weight: 300; }
+.int::placeholder { color: #333; font-weight: 450; }
+.int { font-family: "Noto Sans", sans-serif; outline: none; font-weight: 450; background: #eee; color: #333; font-weight: 300; padding: 12px 15px; border: none; border-radius: 125px; }
+.btn { background: #6f47ff; color: #fff; overflow: hidden; display: flex; align-items: center; gap: 10px; justify-content: center; padding: 12px; border-radius: 125px; border: none; font-weight: 600; }
+i { overflow: hidden; }
+.link > a { font-weight: 600; text-decoration: none; color: #fff; }

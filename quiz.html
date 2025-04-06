@@ -1,0 +1,388 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="loader.css">
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+  body { background: #02192e; } 
+  #waitingScreen { display: flex; align-items: center; justify-content: center; flex-direction: column; height: 100vh; }
+  #gameScreen { flex-direction: column; padding: 20px 0px; }
+  #waitingTimer { display: flex; align-items: center; justify-content: center; padding: 8px 20px; background: #fff; color: #008000; font-weight: bold; border-radius: 125px; }
+  #timerBar { height: 25px; width: 100%; background-color: #6f47ff; transition: width 1s linear; border-radius: 125px; }
+  #timerContainer { margin: 10px; }
+  #options { display: flex; flex-direction: column; padding: 10px; gap: 10px; }
+  .option { border-radius: 125px; border: none; padding: 10px; background: #10364e; color: #fff; font-size: 18px; font-weight: 400; font-family: "Inter", sans-serif; }
+  #questionNumber , #questionText { text-align: right; margin: 10px 20px; }
+  #players , #gameScreen > h3 { text-align: left; margin: 10px 20px; }
+  #activePlayersList { display: none; }
+  #resultScreen { flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 10px; }
+  #waitingScreen > img { width: 100px; }
+  .result-hero { padding: 10px; border: 1px solid; width: 90%; height: 15vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+</style>
+<div id="waitingScreen">
+  <img src="https://i.ibb.co/gbX2y5yV/sand.gif">
+  <p style="margin: 10px; font-size: 18px;">Match Starts In</p><div id="waitingTimer">00:<span id="waitingTime"></span></div>
+  <p style="display: none;">Your Entry Fee: <span id="entryFeeDisplay"></span> coins</p>
+  <ul id="activePlayersList"></ul>
+</div>
+<div id="gameScreen" style="display: none;">
+  <h3>Match Score!</h3>
+  <div id="players">
+    <p>You: <span id="userEmail" style="display: none;"></span> - Score: <span id="userScore">0</span></p>
+    <p>Opponent: <span id="opponentEmail" style="display: none;"></span> - Score: <span id="opponentScore">0</span></p>
+  </div>
+  <div id="questionContainer">
+    <h3 id="questionNumber">Question 1/5</h3>
+    <h2 id="questionText"></h2>
+    <div id="timer" style="display: none;">Time remaining: <span id="timeLeft">4</span> seconds</div>
+    <div id="options">
+      <button class="option" id="option0" onclick="checkAnswer(0)"></button>
+      <button class="option" id="option1" onclick="checkAnswer(1)"></button>
+      <button class="option" id="option2" onclick="checkAnswer(2)"></button>
+      <button class="option" id="option3" onclick="checkAnswer(3)"></button>
+    </div>
+    <div id="timerContainer">
+      <div id="timerBar"></div>
+    </div>
+  </div>
+</div>
+<div id="resultScreen" style="display: none;">
+  <div class="result-hero">
+  <h2>Game Over!</h2>
+  <h3 id="resultMessage"></h3>
+  <p id="finalScores"></p>
+</div>
+</div>
+<audio id="roomSound" src="waiting.mp3" loop></audio>
+<audio id="winSound" src="win.mp3"></audio>
+<audio id="lossSound" src="lose.mp3"></audio>
+<audio id="questionSound" src="room3.mp3" loop></audio>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDyiNmAl8S2s2V-g5Z1io0Yd3LNbE0Z8SQ",
+  authDomain: "maxwin-2e477.firebaseapp.com",
+  databaseURL: "https://maxwin-2e477-default-rtdb.firebaseio.com",
+  projectId: "maxwin-2e477",
+  storageBucket: "maxwin-2e477.firebasestorage.app",
+  messagingSenderId: "243508605090",
+  appId: "1:243508605090:web:998a7b480ff4b6deeae7fb",
+  measurementId: "G-SL3ZR70JE1"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const scriptUrl = "https://script.google.com/macros/s/AKfycbwxxnxzJpks8pVut-V7Bo0trevVQlj321ToCnuc_4ZOyQcF_8cv8Z9xNEkjDZf3uMVh/exec";
+const roomSound = document.getElementById('roomSound');
+const winSound = document.getElementById('winSound');
+const lossSound = document.getElementById('lossSound');
+const questionSound = document.getElementById('questionSound');
+const userEmail = localStorage.getItem("quiz_local");
+const entryFee = localStorage.getItem("match_entry_fee");
+const gameName = "Quiz";
+let userId = userEmail.replace(/[.#$[\]]/g, '_');
+let matchId = null;
+let opponentId = null;
+let opponentEmail = null;
+let gameStarted = false;
+let currentQuestion = 0;
+let userScore = 0;
+let opponentScore = 0;
+let timerInterval;
+let startTime;
+let correctAnswerIndex;
+let waitingInterval;
+const waitingDuration = 20;
+document.getElementById("userEmail").textContent = userEmail;
+document.getElementById("entryFeeDisplay").textContent = entryFee;
+if (!userEmail || !entryFee) {
+  alert("Session expired. Please login again.");
+  window.location.href = "login.html";
+}
+function joinWaitingRoom() {
+  roomSound.play().catch(e => console.log(e));
+  const waitingRef = database.ref('waitingRoom');
+  const playerData = { 
+    email: userEmail, 
+    entryFee: entryFee, 
+    gameName: gameName,
+    timestamp: firebase.database.ServerValue.TIMESTAMP 
+  };
+  waitingRef.orderByChild('entryFee').equalTo(entryFee).once('value', snapshot => {
+    let foundMatch = false;
+    let opponentKey = null;
+    snapshot.forEach(childSnapshot => {
+      const player = childSnapshot.val();
+      if (player.email !== userEmail && player.gameName === gameName) {
+        foundMatch = true;
+        opponentKey = childSnapshot.key;
+        opponentEmail = player.email;
+        opponentId = opponentKey;
+        return true;
+      }
+    });
+    if (foundMatch) {
+      createMatch(userId, opponentKey);
+      waitingRef.child(opponentKey).remove();
+      clearInterval(waitingInterval);
+    } else {
+      waitingRef.child(userId).set(playerData);
+      listenForMatches();
+    }
+  });
+  waitingRef.on('value', snapshot => {
+    const activePlayersList = document.getElementById('activePlayersList');
+    activePlayersList.innerHTML = '';
+    snapshot.forEach(childSnapshot => {
+      const player = childSnapshot.val();
+      const playerItem = document.createElement('li');
+      playerItem.textContent = player.email + " You (" + player.entryFee + " coins)";
+      activePlayersList.appendChild(playerItem);
+    });
+  });
+  let waitingTime = waitingDuration;
+  document.getElementById("waitingTime").textContent = waitingTime;
+  waitingInterval = setInterval(() => {
+    waitingTime--;
+    document.getElementById("waitingTime").textContent = waitingTime;
+    if (waitingTime <= 0) {
+      clearInterval(waitingInterval);
+    }
+  }, 1000);
+  setTimeout(() => {
+    if (!gameStarted) {
+      database.ref(`waitingRoom/${userId}`).remove().then(() => {
+        fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "refundCoins", email: userEmail, entryFee: entryFee }) })
+        .then(response => response.json())
+        .then(data => {
+          alert("Match Not Found.");
+          window.location.href = "index.html";
+        });
+      });
+    }
+  }, waitingDuration * 1000);
+}
+function listenForMatches() {
+  const matchesRef = database.ref('matches');
+  matchesRef.orderByChild(`players/${userId}`).equalTo(true).on('child_added', snapshot => {
+    if (!gameStarted) {
+      matchId = snapshot.key;
+      const match = snapshot.val();
+      Object.keys(match.players).forEach(playerId => {
+        if (playerId !== userId) {
+          opponentId = playerId;
+          database.ref(`waitingRoom/${opponentId}`).once('value', snapshot => {
+            if (snapshot.exists()) {
+              opponentEmail = snapshot.val().email;
+            }
+            document.getElementById("opponentEmail").textContent = opponentEmail || opponentId;
+            clearInterval(waitingInterval);
+            startGame();
+          });
+        }
+      });
+    }
+  });
+}
+function createMatch(player1Id, player2Id) {
+  const matchesRef = database.ref('matches');
+  const newMatchRef = matchesRef.push();
+  matchId = newMatchRef.key;
+  const match = { 
+    entryFee: entryFee, 
+    gameName: gameName,
+    status: 'waiting', 
+    createdAt: firebase.database.ServerValue.TIMESTAMP, 
+    currentQuestion: 0, 
+    players: { [player1Id]: true, [player2Id]: true }, 
+    scores: { [player1Id]: 0, [player2Id]: 0 } 
+  };
+  newMatchRef.set(match).then(() => {
+    document.getElementById("opponentEmail").textContent = opponentEmail || player2Id;
+    startGame();
+  });
+}
+function startGame() {
+  gameStarted = true;
+  document.getElementById("waitingScreen").style.display = "none";
+  document.getElementById("gameScreen").style.display = "flex";
+  database.ref(`matches/${matchId}/status`).set('active');
+  roomSound.pause();
+  roomSound.currentTime = 0;
+  database.ref(`waitingRoom/${userId}`).remove();
+  database.ref(`matches/${matchId}/scores/${opponentId}`).on('value', snapshot => {
+    if (snapshot.exists()) {
+      opponentScore = snapshot.val();
+      document.getElementById("opponentScore").textContent = opponentScore;
+    }
+  });
+  startQuestion();
+  database.ref(`matches/${matchId}/status`).on('value', snapshot => {
+    if (snapshot.val() === 'completed') {
+      endGame();
+    }
+  });
+}
+function generateQuestion() {
+  const operations = ['+', '-'];
+  const operation = operations[Math.floor(Math.random() * operations.length)];
+  let num1, num2, answer;
+  if (operation === '+') {
+    num1 = Math.floor(Math.random() * 9) + 1;
+    num2 = Math.floor(Math.random() * 9) + 1;
+    answer = num1 + num2;
+  } else {
+    num1 = Math.floor(Math.random() * 9) + 1;
+    num2 = Math.floor(Math.random() * num1) + 1;
+    answer = num1 - num2;
+  }
+  return { question: num1 + " " + operation + " " + num2 + " = ?", answer: answer };
+}
+function generateOptions(correctAnswer) {
+  const options = [correctAnswer];
+  while (options.length < 4) {
+    const offset = Math.floor(Math.random() * 5) + 1;
+    const sign = Math.random() > 0.5 ? 1 : -1;
+    const wrongAnswer = correctAnswer + (offset * sign);
+    if (wrongAnswer >= 0 && !options.includes(wrongAnswer)) {
+      options.push(wrongAnswer);
+    }
+  }
+  for (let i = options.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [options[i], options[j]] = [options[j], options[i]];
+  }
+  correctAnswerIndex = options.indexOf(correctAnswer);
+  return options;
+}
+function startQuestion() {
+  if (currentQuestion >= 5) {
+    database.ref(`matches/${matchId}/status`).set('completed');
+    return;
+  }
+  currentQuestion++;
+  document.getElementById("questionNumber").textContent = "Question " + currentQuestion + "/5";
+  const qObj = generateQuestion();
+  const options = generateOptions(qObj.answer);
+  document.getElementById("questionText").textContent = qObj.question;
+  for (let i = 0; i < 4; i++) {
+    const optionButton = document.getElementById("option" + i);
+    optionButton.textContent = options[i];
+    optionButton.disabled = false;
+    optionButton.style.backgroundColor = "";
+  }
+  questionSound.play().catch(e => console.log(e));
+  startTime = Date.now();
+  let timeLeft = 4;
+  document.getElementById("timeLeft").textContent = timeLeft;
+  document.getElementById("timerBar").style.width = "100%";
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    document.getElementById("timeLeft").textContent = timeLeft;
+    const progressPercentage = (timeLeft / 4) * 100;
+    document.getElementById("timerBar").style.width = progressPercentage + "%";
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      setTimeout(startQuestion, 1000);
+      for (let i = 0; i < 4; i++) {
+        document.getElementById("option" + i).disabled = true;
+      }
+    }
+  }, 1000);
+}
+function checkAnswer(selectedIndex) {
+  clearInterval(timerInterval);
+  for (let i = 0; i < 4; i++) {
+    document.getElementById("option" + i).disabled = true;
+  }
+  const responseTime = Math.min(4, (Date.now() - startTime) / 1000);
+  if (selectedIndex === correctAnswerIndex) {
+    let pointsEarned;
+    if (responseTime <= 1) {
+      pointsEarned = 200;
+    } else if (responseTime <= 2) {
+      pointsEarned = 150;
+    } else if (responseTime <= 3) {
+      pointsEarned = 100;
+    } else {
+      pointsEarned = 50;
+    }
+    const bonus = Math.floor(Math.random() * 50);
+    pointsEarned += bonus;
+    userScore += pointsEarned;
+    document.getElementById("userScore").textContent = userScore;
+    database.ref("matches/" + matchId + "/scores/" + userId).set(userScore);
+    document.getElementById("option" + selectedIndex).style.backgroundColor = "#4caf50";
+  } else {
+    document.getElementById("option" + selectedIndex).style.backgroundColor = "#ff0000";
+    document.getElementById("option" + correctAnswerIndex).style.backgroundColor = "#4caf50";
+  }
+  setTimeout(() => {
+    for (let i = 0; i < 4; i++) {
+      document.getElementById("option" + i).style.backgroundColor = "";
+    }
+    startQuestion();
+  }, 1500);
+}
+function saveResult(email, entryFee, profit, status) {
+  fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "saveResult", email: email, entryFee: entryFee, profit: profit, status: status, gameName: gameName }) });
+}
+function endGame() {
+  clearInterval(timerInterval);
+  document.getElementById("gameScreen").style.display = "none";
+  document.getElementById("resultScreen").style.display = "flex";
+  let resultMessage;
+  if (userScore > opponentScore) {
+    resultMessage = "Congratulations! You Won!";
+    winSound.play().catch(e => console.log(e));
+    fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "awardWinnings", email: userEmail, entryFee: entryFee, gameName: gameName }) })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === "success") {
+        alert("You Won " + data.winningAmount + " Coins!");
+        let userProfit = parseInt(data.winningAmount) - parseInt(entryFee);
+        saveResult(userEmail, entryFee, userProfit, "Won");
+        saveResult(opponentEmail, entryFee, -parseInt(entryFee), "Lose");
+      }
+    });
+  } else if (userScore < opponentScore) {
+    resultMessage = "You Lost. Better luck next time!";
+    lossSound.play().catch(e => console.log(e));
+    fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "awardWinnings", email: opponentEmail, entryFee: entryFee, gameName: gameName }) })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === "success") {
+        alert("Opponent Won " + data.winningAmount + " Coins!");
+        let oppProfit = parseInt(data.winningAmount) - parseInt(entryFee);
+        saveResult(userEmail, entryFee, -parseInt(entryFee), "Lose");
+        saveResult(opponentEmail, entryFee, oppProfit, "Won");
+      }
+    });
+  } else {
+    resultMessage = "It's a Tie!";
+    saveResult(userEmail, entryFee, 0, "Tie");
+    saveResult(opponentEmail, entryFee, 0, "Tie");
+  }
+  document.getElementById("resultMessage").textContent = resultMessage;
+  document.getElementById("finalScores").textContent = "Your Score: " + userScore + " | Opponent's Score: " + opponentScore;
+  database.ref("matches/" + matchId + "/scores").once('value', snapshot => {
+    if (snapshot.exists()) {
+      database.ref("matches/" + matchId + "/scores").set({[userId]: 0, [opponentId]: 0});
+    }
+  });
+  database.ref("matches/" + matchId).remove();
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (!gameStarted) { roomSound.pause(); }
+  } else {
+    if (!gameStarted) { roomSound.play().catch(e => console.log(e)); }
+  }
+});
+window.addEventListener('beforeunload', () => {
+  roomSound.pause();
+  winSound.pause();
+  lossSound.pause();
+});
+joinWaitingRoom();
+</script>

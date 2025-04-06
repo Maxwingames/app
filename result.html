@@ -1,0 +1,76 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="loader.css">
+<link rel="stylesheet" href="style.css">
+<style>
+    body { color: #333; }
+    .profit-positive , .status-won { color: #008000; font-weight: bold; }
+    .profit-negative , .status-lose { color: #ff0000; font-weight: bold; }
+    #resultContainer { display: flex; flex-direction: column-reverse; padding: 10px; gap: 10px; }
+    .card { padding: 10px; background: #eee; border-radius: 12px; box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px; }
+    .form { text-align: center; }
+</style>
+<div class="form">
+    <h2>Game History</h2>
+</div>
+<hr>
+<div id="loader"><div class="loader"></div></div>
+
+<div id="resultContainer" class="container"></div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let email = localStorage.getItem("quiz_local");
+        if (!email) {
+            alert("No user logged in!");
+            window.location.href = "index.html";
+            return;
+        }
+
+        document.getElementById("loader").style.display = "flex";
+
+        fetch("https://script.google.com/macros/s/AKfycbwuQcvHRfs_Ob6xe8ysNhQiriO9vkh47GD9FaYZItmZvnwqsml4xfswVnEDpxEeO_Gu/exec", {
+            method: "POST",
+            body: JSON.stringify({ action: "getResults", email })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("loader").style.display = "none";
+            let container = document.getElementById("resultContainer");
+            container.innerHTML = "";
+
+            if (data.length === 0) {
+                container.innerHTML = "<p>No results found.</p>";
+                return;
+            }
+
+            data.forEach(row => {
+                let card = document.createElement("div");
+                card.classList.add("card");
+
+                let entryFee = document.createElement("div");
+                entryFee.classList.add("entry-fee");
+                entryFee.textContent = `Entry Fee: ₹${row.entryFee}`;
+
+                let profit = document.createElement("div");
+                profit.classList.add("profit", row.profit < 0 ? "profit-negative" : "profit-positive");
+                profit.textContent = `Profit: ₹${row.profit}`;
+
+                let status = document.createElement("div");
+                status.classList.add("status", row.status === "Lose" ? "status-lose" : "status-won");
+                status.textContent = `Status: ${row.status}`;
+
+                card.appendChild(entryFee);
+                card.appendChild(profit);
+                card.appendChild(status);
+
+                container.appendChild(card);
+            });
+        })
+        .catch(error => {
+            document.getElementById("loader").style.display = "none";
+            console.error("Error fetching results:", error);
+            alert("Error loading results.");
+        });
+    });
+</script>

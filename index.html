@@ -1,0 +1,200 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="loader.css">
+<link rel="stylesheet" href="style.css">
+<style>
+    body { background: #fff; }
+    .slider-container { display: none; }
+    .footer { padding: 10px 0; box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px; display: flex; align-items: center; justify-content: space-around; width: 100%; position: fixed; bottom: 0; }
+    .footer > a { color: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .footer > a > svg { width: 24px; }
+    .footer > a > span { font-size: 12px; }
+    a { text-decoration: none; }
+    .home { fill: #6f47ff; font-weight: 600; }
+    .head { padding: 0 0 20px 0; background: radial-gradient(circle, lightblue 0%, #00008b 40%); height: auto; display: flex; align-items: center; flex-direction: column; }
+    .coins { padding: 10px 30px; border-radius: 125px; background: #fff; color: #6f47ff; font-weight: 600; }
+    .header { margin: 10px; position: absolute; right: 10px; display: flex; gap: 10px; align-items: center; }
+    .image { margin: 10px; }
+    .image > img { width: 220px; }
+    #matchesPage { position: fixed; top: 0; width: 100%; }
+    #backButton { background: transparent; border: none; font-size: 22px; margin: 10px 20px; color: #fff; }
+    .match-card { display: flex; align-items: center; justify-content: space-around; }
+    .win { display: flex; flex-direction: column; align-items: center; padding: 10px 20px; background: #00008b; border-radius: 12px; color: #fff; }
+    .bg { background: #00008b; align-items: center; display: flex; border-radius: 25px; height: 80px; }
+    .whatsapp { width: 40px; height: 40px; border-radius: 125px; background: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; color: green; }
+    .btn { color: #6f47ff; font-size: 18px; padding: 8px 35px; margin: 10px 0 0 0; border-radius: 125px; background: #eeee0b; }
+    .tag { margin: 15px 20px; }
+    .white { background: #fff; border-radius: 25px; color: #333; height: 100vh; }
+    .disco-hr { margin: 10px; }
+    .text { margin: 10px 20px; color: #333; font-size: 22px; }
+    .zombie { background: #eee; padding: 0 0 10px 0; color: #333; border-radius: 12px; width: 150px; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+    .zombie > img { width: 100%; height: 130px; object-fit: cover; display: block; }
+    .match-card > button { border: none; width: 45px; height: 45px; font-size: 18px; background: #00008b; color: #fff; border-radius: 125px; }
+    .games { display: flex; justify-content: space-around; }
+    .zombie > p { font-weight: 580; }
+    .play-btn { margin: 10px 0; width: 90%; padding: 8px; border-radius: 125px; border: none; background: #6f47ff; font-weight: 600; color: #fff; }
+</style>
+<div class="head">
+<div class="header">
+    <p class="coins" onclick="window.location.href='add_coins.html';"><span id="userCoins"></span></p>
+    <a href="#" class="whatsapp"><i class="fa-brands fa-whatsapp"></i></a>
+</div>
+<div class="image">
+    <img src="https://i.ibb.co/bMWs89Fx/ban.png">
+</div>
+<h2>Zombie Shooter</h2>
+<p>Win Under 30 Seconds</p>
+<button id="battleButton" class="btn">Win Now</button>
+</div>
+<h2 class="text">खेलो और कमाओ!</h2>
+<div class="games">
+    <div class="zombie">
+        <img src="https://i.ibb.co/mCHfxkJs/zombie.png">
+        <p>Zombie Shooter</p>
+        <button id="playButton" class="play-btn">Play</button>
+    </div>
+    <div class="zombie">
+        <img src="https://i.ibb.co/4RN50DV8/matchs.png">
+        <p>Basic Quiz</p>
+        <button id="quizButton" class="play-btn">Play</button>
+    </div>
+</div>
+<div class="slider-container">
+    <div class="slider" id="slider"></div>
+    <div class="dots" id="dots"></div>
+</div>
+<div id="userInfo" class="form">
+    <p style="display: none;"><b>Email:</b> <span id="userEmail"></span></p>
+    <h2>About The Game</h2>
+</div>
+
+<div id="loader" style="display: none;"><div class="loader"></div></div>
+
+<div id="dashboard" style="display: none;">
+    <h2>Available Matches</h2>
+</div>
+
+<div id="matchesPage" style="display: none;">
+    <div class="bg">
+        <button id="backButton"><i class="fa-solid fa-arrow-left"></i></button>
+    </div>
+    <div class="white"> 
+        <h2 class="tag">Play And Win!</h2>
+        <div id="matchesContainer"></div>
+    </div>
+</div>
+
+<div class="footer">
+    <a href="refer.html">
+        <svg enable-background="new 0 0 500 500" id="Layer_1" version="1.1" viewBox="0 0 500 500" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><path d="   M179.99,250.01c0,35.879-29.111,64.99-64.98,64.99" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M115.01,315C79.102,315,50,285.889,50,250.01" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M50,250.01c0-35.898,29.102-65,65.01-65" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M115.01,185.01c35.869,0,64.98,29.102,64.98,65" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M450,400c0,35.879-29.141,65-65.02,65" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M384.98,465c-35.869,0-65.01-29.121-65.01-65" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M319.971,400c0-35.898,29.141-65.01,65.01-65.01" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M384.98,334.99c35.879,0,65.02,29.111,65.02,65.01" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M450,100.02c0,35.879-29.141,64.99-65.02,64.99" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M384.98,165.01c-35.869,0-65.01-29.111-65.01-64.99" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M319.971,100.02c0-35.898,29.141-65.02,65.01-65.02" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><path d="   M384.98,35C420.859,35,450,64.121,450,100.02" fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10"/><line fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10" x1="172.471" x2="324.971" y1="214.98" y2="128.76"/><line fill="none" stroke="#130B7A" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="2.6131" stroke-width="10" x1="326.855" x2="174.326" y1="365.449" y2="279.209"/></g> <span>Refer</span>
+    </a>
+    <a onclick="reload()" class="home">
+        <svg id="Layer_1" style="enable-background:new 0 0 24 24;" version="1.1" viewBox="0 0 24 24" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M21.146,8.576l-7.55-6.135c-0.925-0.751-2.267-0.751-3.192,0c0,0,0,0,0,0L2.855,8.575C2.59,8.79,2.439,9.108,2.439,9.448  v11.543c0,0.62,0.505,1.13,1.125,1.13h5.062c0.62,0,1.125-0.51,1.125-1.13v-7.306h4.499v7.306c0,0.62,0.505,1.13,1.125,1.13h5.062  c0.62,0,1.125-0.51,1.125-1.13V9.448C21.561,9.108,21.41,8.79,21.146,8.576z M20.436,20.997h-5.062V13.68  c0-0.62-0.505-1.119-1.125-1.119H9.75c-0.62,0-1.125,0.499-1.125,1.119v7.317H3.564V9.448l7.55-6.134  c0.513-0.418,1.26-0.417,1.773,0l7.55,6.134V20.997z"/> <span style="color: #6f47ff;">Home</span> </svg>
+    </a>
+    <a href="profile.html">
+        <svg id="Layer_1" style="enable-background:new 0 0 505 505;" version="1.1" viewBox="0 0 256 256" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><path d="M117.1,83.7c1,1.1,2.4,1.6,3.7,1.6c1.3,0,2.6-0.5,3.5-1.4l27.5-26.1c2.1-2,2.2-5.2,0.2-7.3c-2-2.1-5.2-2.2-7.3-0.2   L121,72.9l-9.6-10c-2-2.1-5.2-2.1-7.3-0.1c-2.1,2-2.1,5.2-0.1,7.3L117.1,83.7z"/><path d="M81.6,92.8c4.3,22.2,23.8,38.3,46.4,38.3s42.1-16.1,46.4-38.3l6.5-33.4c1.9-14.2-2.4-28.5-11.8-39.3   c-9.4-10.8-23-17-37.3-17h-7.6c-14.3,0-27.9,6.2-37.3,17c-9.4,10.8-13.7,25.1-11.7,39.5L81.6,92.8z M94.6,26.9   c7.4-8.5,18.2-13.4,29.5-13.4h7.6c11.3,0,22.1,4.9,29.5,13.4c7.4,8.5,10.8,19.9,9.4,30.8l-6.4,33.1c-3.4,17.3-18.6,29.9-36.3,29.9   s-32.9-12.6-36.3-29.9l-6.4-32.9C83.8,46.7,87.2,35.4,94.6,26.9z"/><path d="M243.1,240.2l-14-65.8c-1.3-6-5.6-10.9-11.4-13l-44.9-15.9c-1.8-0.6-3.8-0.2-5.2,1.1l-39.6,37l-39.6-37   c-1.4-1.3-3.4-1.7-5.2-1.1l-44.9,15.9c-5.7,2-10.1,7-11.4,13l-14,65.8c-0.7,3.1,0.1,6.3,2.1,8.8s5,3.9,8.2,3.9h209.6   c3.2,0,6.2-1.4,8.2-3.9S243.7,243.3,243.1,240.2z M23,242.4l14-65.8c0.5-2.5,2.3-4.6,4.7-5.4l42-14.9l40.8,38.1c2,1.9,5.1,1.9,7,0   l40.8-38.1l41.9,14.9c2.4,0.9,4.2,2.9,4.7,5.4l13.8,66L23,242.4z"/></g> <span>Account</span></svg>
+    </a>
+</div>
+<script src="script.js"></script>
+<script>
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbwxxnxzJpks8pVut-V7Bo0trevVQlj321ToCnuc_4ZOyQcF_8cv8Z9xNEkjDZf3uMVh/exec";
+    const loader = document.getElementById("loader");
+    const dashboard = document.getElementById("dashboard");
+    const matchesPage = document.getElementById("matchesPage");
+    const matchesContainer = document.getElementById("matchesContainer");
+    const battleButton = document.querySelectorAll("#battleButton");
+    const backButton = document.getElementById("backButton");
+    const userInfo = document.getElementById("userInfo");
+    
+    function showLoader() {
+        loader.style.display = "flex";
+    }
+    
+    function hideLoader() {
+        loader.style.display = "none";
+    }
+    
+    const userEmail = localStorage.getItem("quiz_local");
+    
+    if (!userEmail) {
+        window.location.href = "signup.html";
+    }
+    
+    document.getElementById("userEmail").textContent = userEmail;
+    
+    showLoader();
+    
+    fetch(scriptUrl, {
+        method: "POST",
+        body: JSON.stringify({ action: "getUserData", email: userEmail })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoader();
+        if (data.status === "success") {
+            document.getElementById("userCoins").textContent = "₹" + data.coins;
+        } else {
+            localStorage.removeItem("quiz_local");
+            window.location.href = "signup.html";
+        }
+    });
+    
+    battleButton.forEach(btn => {
+        btn.addEventListener("click", () => {
+            dashboard.style.display = "none";
+            userInfo.style.display = "none";
+            matchesPage.style.display = "block";
+            showLoader();
+    
+            fetch(scriptUrl, {
+                method: "POST",
+                body: JSON.stringify({ action: "getMatches" })
+            })
+            .then(response => response.json())
+            .then(matches => {
+                hideLoader();
+                let matchesHtml = "";
+                matches.forEach(match => {
+                    matchesHtml += `
+                        <div class="match-card">
+                            <p class="win">Win: <span> ₹${match.winningAmount}</span></p>
+                            <p class="entry">Entry <span> ₹${match.entryFee}</span></p>
+                            <button onclick="joinMatch(${match.entryFee})" class="play"><i class="fa-solid fa-play"></i></button>
+                        </div>
+                        <hr class="disco-hr">
+                    `;
+                });
+                matchesContainer.innerHTML = matchesHtml;
+            });
+        });
+    });
+    
+    backButton.addEventListener("click", () => {
+        matchesPage.style.display = "none";
+        dashboard.style.display = "none";
+        userInfo.style.display = "flex";
+        loader.style.display = "flex";
+    });
+    
+    function joinMatch(entryFee) {
+        if (confirm(`Are you sure you want to join this match for ${entryFee} coins?`)) {
+            showLoader();
+            fetch(scriptUrl, {
+                method: "POST",
+                body: JSON.stringify({ action: "deductCoins", email: userEmail, entryFee: entryFee })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.status === "success") {
+                    localStorage.setItem("match_entry_fee", entryFee);
+                    alert("Successfully joined the match!");
+                    window.location.href = "play.html";
+                } else {
+                    alert("Not enough coins!");
+                }
+            });
+        }
+    }
+</script>

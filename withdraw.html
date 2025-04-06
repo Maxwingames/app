@@ -1,0 +1,104 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="loader.css">
+<link rel="stylesheet" href="style.css">
+
+<style>
+    #confirmWithdraw, #loader { display: none; }
+    #confirmWithdraw { position: fixed; align-items: center; justify-content: center; flex-direction: column; width: 100%; top: 45%; }
+    .withdraw-body { display: flex; flex-direction: column; gap: 10px; padding: 10px; background: #123753; width: 85%; border-radius: 12px; }
+</style>
+
+<div class="image">
+    <img src="https://i.ibb.co/hJVsTHRL/withdraw.png">
+</div>
+
+<div class="form">
+    <h2>Withdraw Funds</h2>
+    <p>Withdraw Your Coins.</p>
+    <input type="text" id="upiID" class="int" placeholder="UPI ID:" required>
+    <input type="number" id="amount" class="int" placeholder="Amount: " min="25" max="500" required>
+    <button onclick="checkBalance()" class="btn">Withdraw</button>
+</div>
+
+<div id="loader"><div class="loader"></div></div>
+
+<div id="confirmWithdraw">
+    <div class="withdraw-body">
+        <p style="display: none;">Player: <strong><span id="playerName"></span></strong></p>
+        <p>Amount: <strong>₹<span id="withdrawAmount"></span></strong></p>
+        <p>Platform Fee <strong>4%</strong></p>
+        <p>Total Price: <strong>₹<span id="finalAmount"></span></strong></p>
+        <button onclick="confirmWithdrawal()" class="btn">Okay</button>
+        <div id="loader"><div class="loader"></div></div>
+    </div>
+</div>
+
+<script>
+    let withdrawData = {};
+
+    function checkBalance() {
+        let email = localStorage.getItem("quiz_local");
+        let upiID = document.getElementById("upiID").value;
+        let amount = parseFloat(document.getElementById("amount").value);
+
+        if (!email || !upiID || amount < 25 || amount > 500) {
+            alert("Invalid input. Amount should be between 25 and 500 INR.");
+            return;
+        }
+
+        document.getElementById("loader").style.display = "flex";
+
+        fetch("https://script.google.com/macros/s/AKfycbzwr4xjGSLVC2-EPiNMFkoGqe2DbnkInfU7sdvDycJrwaPXdFJ5T-XPMK_lNSuxY5-w/exec", {
+            method: "POST",
+            body: JSON.stringify({ action: "checkBalance", email })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("loader").style.display = "none";
+
+            let currentCoins = parseFloat(data.coins);
+            let fee = amount * 0.04;
+            let finalAmount = (amount - fee).toFixed(2);
+            let playerName = data.playerName || "Unknown Player";
+
+            if (currentCoins < amount) {
+                alert("Insufficient balance.");
+                return;
+            }
+
+            withdrawData = { email, upiID, amount, finalAmount, playerName };
+            document.getElementById("playerName").innerText = playerName;
+            document.getElementById("withdrawAmount").innerText = amount;
+            document.getElementById("finalAmount").innerText = finalAmount;
+            document.getElementById("confirmWithdraw").style.display = "flex";
+        });
+    }
+
+    function confirmWithdrawal() {
+        document.getElementById("loader").style.display = "flex";
+
+        fetch("https://script.google.com/macros/s/AKfycbzwr4xjGSLVC2-EPiNMFkoGqe2DbnkInfU7sdvDycJrwaPXdFJ5T-XPMK_lNSuxY5-w/exec", {
+            method: "POST",
+            body: JSON.stringify({
+                action: "withdraw",
+                email: withdrawData.email,
+                upiID: withdrawData.upiID,
+                withdrawAmount: withdrawData.amount,
+                actualAmount: withdrawData.finalAmount,
+                playerName: withdrawData.playerName
+            })
+        })
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById("loader").style.display = "none";
+
+            if (data === "Success") {
+                alert(`Withdrawal request submitted successfully!`);
+                window.location.reload();
+            } else {
+                alert("Withdrawal request failed.");
+            }
+        });
+    }
+</script>

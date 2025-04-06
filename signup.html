@@ -1,0 +1,104 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="loader.css">
+<link rel="stylesheet" href="style.css">
+<style>
+    .image { background: linear-gradient(45deg , #0000ff , #800080); margin: -50px 0 0 0; padding: 50px 0 0 0; border-radius: 12px; }
+    body { background: #fff; color: #333; }
+    .int { background: #eee; color: #333; font-weight: 450; }
+    .int::placeholder { color: #333; font-weight: 450; }
+    .link { font-weight: 500; }
+    .link > a { font-weight: 700; color: #333; text-decoration: underline; }
+</style>
+<div id="loader" style="display: none;"><div class="loader"></div></div>
+<div class="image">
+    <img src="https://i.ibb.co/Myr5QS1w/signup.png">
+</div>
+<div id="registrationForm" class="form">
+    <h2 class="form-h2">Signup</h2>
+    <p class="form-p">Signup For Start Earning.</p>
+    <input type="text" id="name" class="int" name="name" placeholder="Full Name: " class="int" required>
+    <input type="email" id="email" class="int" name="email" placeholder="Email: " required>
+    <input type="number" id="mobile" class="int" placeholder="Mobile: " name="mobile" required>
+    <input type="password" id="password" class="int" placeholder="Password: " name="password" required>
+    <input type="text" id="referralCode" class="int" placeholder="Referral Code (Optional): " name="referralCode">
+    <button type="button" id="getOtpBtn" class="btn"><i class="fa-solid fa-unlock"></i> Get OTP</button>
+</div>
+
+<div id="otpSection" style="display:none;" class="form">
+    <input type="text" id="otp" name="otp" class="int" placeholder="Enter OTP:" required>
+    <button type="button" id="submitBtn" class="btn"><i class="fa-solid fa-key"></i> Submit</button>
+</div>
+<div class="form">
+    <p class="link">Already Have Account? <a href="login.html">Login</a></p>
+</div>
+<script>
+    if (localStorage.getItem("quiz_local")) {
+        window.location.href = "index.html";
+    }
+
+    function showLoader() {
+        document.getElementById("loader").style.display = "flex";
+    }
+
+    function hideLoader() {
+        document.getElementById("loader").style.display = "none";
+    }
+
+    document.getElementById("getOtpBtn").addEventListener("click", function() {
+        const email = document.getElementById("email").value;
+        const mobile = document.getElementById("mobile").value;
+
+        if (!email || !mobile) {
+            alert("Please enter your email and mobile number.");
+            return;
+        }
+
+        showLoader();
+        
+        fetch("https://script.google.com/macros/s/AKfycbwk0JwlMXD93pg_wJI8sc_O3UDCGAqT7JIkzz_RgiVxr9sw470CcaLY1s9bG-0ws0TG/exec", {
+            method: "POST",
+            body: JSON.stringify({ action: "sendOTP", email, mobile })
+        })
+        .then(response => response.text())
+        .then((result) => {
+            hideLoader();
+            if (result === "Email Exists") {
+                alert("This Email is already registered!");
+            } else if (result === "Mobile Exists") {
+                alert("This Mobile number is already registered!");
+            } else {
+                alert("OTP Sent to your Email!");
+                document.getElementById("otpSection").style.display = "flex";
+            }
+        });
+    });
+
+    document.getElementById("submitBtn").addEventListener("click", function() {
+        const name = document.getElementById("name").value;
+        const email = document.getElementById("email").value;
+        const mobile = document.getElementById("mobile").value;
+        const password = document.getElementById("password").value;
+        const otp = document.getElementById("otp").value;
+        const referralCode = document.getElementById("referralCode").value;
+
+        showLoader();
+
+        fetch("https://script.google.com/macros/s/AKfycbwk0JwlMXD93pg_wJI8sc_O3UDCGAqT7JIkzz_RgiVxr9sw470CcaLY1s9bG-0ws0TG/exec", {
+            method: "POST",
+            body: JSON.stringify({ action: "verifyAndRegister", name, email, mobile, password, otp, referralCode })
+        })
+        .then(response => response.text())
+        .then(result => {
+            hideLoader();
+            if (result === "Registered") {
+                localStorage.setItem("quiz_local", email);
+                alert("Registration Successful!");
+                window.location.href = "index.html";
+            } else {
+                alert("Invalid OTP!");
+            }
+        });
+    });
+</script>

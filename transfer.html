@@ -1,0 +1,53 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="loader.css">
+<link rel="stylesheet" href="style.css">
+<style>
+    body { background: #fff; color: #333; }
+    .int { background: #eee; }
+</style>
+<div class="form">
+    <div class="image">
+        <img src="https://cdn.pixabay.com/photo/2014/12/21/23/57/money-576443_1280.png">
+    </div>
+    <h2>Transfer Coins</h2>
+    <input type="text" id="userCode" placeholder="Referral Code:" class="int" required>
+    <input type="number" id="amount" placeholder="Amount: " class="int" required>
+    <button onclick="transferCoins()" class="btn">Send</button>
+</div>
+<div id="loader" style="display: none;"><div class="loader"></div></div>
+<script>
+    function transferCoins() {
+        const email = localStorage.getItem("quiz_local");
+        if (!email) {
+            alert("Please login first.");
+            window.location.href = "login.html";
+            return;
+        }
+
+        const userCode = document.getElementById("userCode").value;
+        const amount = parseInt(document.getElementById("amount").value);
+        if (!userCode || isNaN(amount) || amount <= 0) {
+            alert("Please enter valid details.");
+            return;
+        }
+
+        const loader = document.getElementById("loader");
+        loader.style.display = "flex";
+
+        fetch("https://script.google.com/macros/s/AKfycbx3cW3QHL57hk0xivOsxOmYB0ST5Sb7ysO_cN67JLjJku0bfutxSV7pVuXP2pnHpG3A/exec", {
+            method: "POST",
+            body: JSON.stringify({ email, userCode, amount })
+        })
+        .then(res => res.json())
+        .then(response => {
+            loader.style.display = "none";
+            alert(response.message);
+            location.reload();
+        })
+        .catch(error => {
+            loader.style.display = "none";
+            alert("Error processing request.");
+        });
+    }
+</script>

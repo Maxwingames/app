@@ -1,0 +1,383 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="loader.css">
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+  body { background: #02192e; }
+  #waitingScreen { display: flex; align-items: center; justify-content: center; flex-direction: column; height: 100vh; }
+  #gameScreen { flex-direction: column; padding: 20px 0px; align-items: center; display: none; }
+  #waitingTimer { display: flex; align-items: center; justify-content: center; padding: 8px 20px; background: #fff; color: #008000; font-weight: bold; border-radius: 125px; }
+  #players { width: 100%; padding: 10px 20px; display: flex; justify-content: space-around; }
+  #gameCanvas { border: 2px solid #10364e; border-radius: 8px; }
+  #timeIndicator { margin: 10px 0; font-weight: bold; color: #008000; }
+  #scoreBoard { margin: 10px 0; display: flex; justify-content: space-around; width: 100%; max-width: 400px; }
+  #resultScreen { flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 10px; display: none; }
+  .result-hero { padding: 10px; border: 1px solid; width: 90%; height: 15vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  #gameTimer { font-size: 24px; font-weight: bold; color: #ff0000; margin: 10px 0; }
+  #activePlayersList { display: none; }
+  #resultScreen { flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 10px; }
+  #waitingScreen > img { width: 100px; }
+  .zombie-img { width: 30px; height: 30px; object-fit: contain; }
+</style>
+<div id="waitingScreen">
+  <img src="https://i.ibb.co/gbX2y5yV/sand.gif">
+  <div id="waitingTimer">00:<span id="waitingTime"></span></div>
+  <p style="display: none;">Your Entry Fee: <span id="entryFeeDisplay"></span> coins</p>
+  <ul id="activePlayersList"></ul>
+</div>
+<div id="gameScreen">
+  <h3>Zombie Shooter Match</h3>
+  <div id="players">
+    <p>You: <span id="userEmail" style="display: none;"></span> - Score: <span id="playerScore">0</span></p>
+    <p>Opponent: <span id="opponentEmail" style="display: none;"></span> - Score: <span id="opponentScore">0</span></p>
+  </div>
+  <div id="gameTimer">Time: 20</div>
+  <div id="timeIndicator">Waiting for game to start...</div>
+  <canvas id="gameCanvas" width="330" height="500"></canvas>
+</div>
+<div id="resultScreen">
+  <div class="result-hero">
+    <h2>Game Over!</h2>
+    <h3 id="resultMessage"></h3>
+    <p>Your Score: <span id="finalPlayerScore">0</span></p>
+    <p>Opponent Score: <span id="finalOpponentScore">0</span></p>
+  </div>
+</div>
+<audio id="roomSound" src="waiting.mp3" loop></audio>
+<audio id="winSound" src="win.mp3"></audio>
+<audio id="lossSound" src="lose.mp3"></audio>
+<audio id="shootSound" src="bg.mp3"></audio>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDyiNmAl8S2s2V-g5Z1io0Yd3LNbE0Z8SQ",
+  authDomain: "maxwin-2e477.firebaseapp.com",
+  databaseURL: "https://maxwin-2e477-default-rtdb.firebaseio.com",
+  projectId: "maxwin-2e477",
+  storageBucket: "maxwin-2e477.firebasestorage.app",
+  messagingSenderId: "243508605090",
+  appId: "1:243508605090:web:998a7b480ff4b6deeae7fb",
+  measurementId: "G-SL3ZR70JE1"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const scriptUrl = "https://script.google.com/macros/s/AKfycbwxxnxzJpks8pVut-V7Bo0trevVQlj321ToCnuc_4ZOyQcF_8cv8Z9xNEkjDZf3uMVh/exec";
+const roomSound = document.getElementById('roomSound');
+const winSound = document.getElementById('winSound');
+const lossSound = document.getElementById('lossSound');
+const shootSound = document.getElementById('shootSound');
+const userEmail = localStorage.getItem("quiz_local");
+const entryFee = localStorage.getItem("match_entry_fee");
+const gameName = "Zombie";
+let userId = userEmail.replace(/[.#$[\]]/g, '_');
+let matchId = null;
+let opponentId = null;
+let opponentEmail = null;
+let gameStarted = false;
+let playerScore = 0;
+let opponentScore = 0;
+let gameTimer = 20;
+const zombiePoints = { mega: 20, white: 15, chota: 10, little: 5 };
+const zombies = [];
+const zombieImages = {};
+let canvas, ctx;
+let waitingInterval;
+let gameInterval;
+let zombieInterval;
+
+class Zombie {
+  constructor(type, x, y) {
+    this.type = type;
+    this.x = x;
+    this.y = y;
+    this.width = 62;
+    this.height = 62;
+    this.active = true;
+    this.speed = Math.random() * 2 + 1;
+    this.image = new Image();
+    this.image.src = `https://i.ibb.co/${{
+      mega: 'Mxc8LxNZ/megazombie.png',
+      white: 'DB1hV5s/whitezombie.png',
+      chota: '23HKHTQP/chotazombie.png',
+      little: 'BHCYRvb8/littlezombe.png'
+    }[type]}`;
+  }
+
+  draw() {
+    if (this.active) {
+      ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+      this.y += this.speed;
+      if (this.y > canvas.height) this.active = false;
+    }
+  }
+}
+
+function initCanvas() {
+  canvas = document.getElementById('gameCanvas');
+  ctx = canvas.getContext('2d');
+  canvas.addEventListener('click', handleCanvasClick);
+}
+
+function spawnZombies() {
+  const types = ['mega', 'white', 'chota', 'little'];
+  for (let i = 0; i < 3; i++) {
+    const x = Math.random() * (canvas.width - 80);
+    const y = -80;
+    zombies.push(new Zombie(types[Math.floor(Math.random() * types.length)], x, y));
+  }
+}
+
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  zombies.forEach((zombie, index) => {
+    if (zombie.active) {
+      zombie.draw();
+    } else {
+      zombies.splice(index, 1);
+    }
+  });
+  requestAnimationFrame(gameLoop);
+}
+
+function handleCanvasClick(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  zombies.forEach(zombie => {
+    if (zombie.active &&
+        mouseX > zombie.x && mouseX < zombie.x + zombie.width &&
+        mouseY > zombie.y && mouseY < zombie.y + zombie.height) {
+      shootSound.currentTime = 0;
+      shootSound.play();
+      playerScore += zombiePoints[zombie.type];
+      document.getElementById("playerScore").textContent = playerScore;
+      database.ref(`matches/${matchId}/scores/${userId}`).set(playerScore);
+      zombie.active = false;
+    }
+  });
+}
+
+document.getElementById("userEmail").textContent = userEmail;
+document.getElementById("entryFeeDisplay").textContent = entryFee;
+
+if (!userEmail || !entryFee) {
+  alert("Session expired. Please login again.");
+  window.location.href = "login.html";
+}
+
+function joinWaitingRoom() {
+  roomSound.play().catch(e => console.log(e));
+  const waitingRef = database.ref('waitingRoom');
+  const playerData = { 
+    email: userEmail, 
+    entryFee: entryFee, 
+    gameName: gameName,
+    timestamp: firebase.database.ServerValue.TIMESTAMP 
+  };
+  
+  waitingRef.once('value', snapshot => {
+    let foundMatch = false;
+    let opponentKey = null;
+    
+    snapshot.forEach(childSnapshot => {
+      const player = childSnapshot.val();
+      if (player.email !== userEmail && 
+          player.entryFee === entryFee && 
+          player.gameName === gameName) {
+        foundMatch = true;
+        opponentKey = childSnapshot.key;
+        opponentEmail = player.email;
+        opponentId = opponentKey;
+        return true;
+      }
+    });
+    
+    if (foundMatch) {
+      createMatch(userId, opponentKey);
+      waitingRef.child(opponentKey).remove();
+      clearInterval(waitingInterval);
+    } else {
+      waitingRef.child(userId).set(playerData);
+      listenForMatches();
+    }
+  });
+  
+  waitingRef.on('value', snapshot => {
+    const activePlayersList = document.getElementById('activePlayersList');
+    activePlayersList.innerHTML = '';
+    snapshot.forEach(childSnapshot => {
+      const player = childSnapshot.val();
+      const playerItem = document.createElement('li');
+      playerItem.textContent = player.email + " (" + player.entryFee + " coins - " + (player.gameName || "Unknown") + ")";
+      activePlayersList.appendChild(playerItem);
+    });
+  });
+  
+  let waitingTime = 20;
+  document.getElementById("waitingTime").textContent = waitingTime;
+  waitingInterval = setInterval(() => {
+    waitingTime--;
+    document.getElementById("waitingTime").textContent = waitingTime;
+    if (waitingTime <= 0) clearInterval(waitingInterval);
+  }, 1000);
+  
+  setTimeout(() => {
+    if (!gameStarted) {
+      database.ref(`waitingRoom/${userId}`).remove().then(() => {
+        fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "refundCoins", email: userEmail, entryFee: entryFee }) })
+        .then(response => response.json())
+        .then(data => {
+          alert("Match Not Found.");
+          window.location.href = "index.html";
+        });
+      });
+    }
+  }, 20000);
+}
+
+function listenForMatches() {
+  const matchesRef = database.ref('matches');
+  matchesRef.orderByChild(`players/${userId}`).equalTo(true).on('child_added', snapshot => {
+    if (!gameStarted) {
+      matchId = snapshot.key;
+      const match = snapshot.val();
+      Object.keys(match.players).forEach(playerId => {
+        if (playerId !== userId) {
+          opponentId = playerId;
+          database.ref(`waitingRoom/${opponentId}`).once('value', snapshot => {
+            if (snapshot.exists()) opponentEmail = snapshot.val().email;
+            document.getElementById("opponentEmail").textContent = opponentEmail || opponentId;
+            clearInterval(waitingInterval);
+            startGame();
+          });
+        }
+      });
+    }
+  });
+}
+
+function createMatch(player1Id, player2Id) {
+  const matchesRef = database.ref('matches');
+  const newMatchRef = matchesRef.push();
+  matchId = newMatchRef.key;
+  const match = {
+    entryFee: entryFee,
+    gameName: gameName,
+    status: 'waiting',
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+    players: { [player1Id]: true, [player2Id]: true },
+    scores: { [player1Id]: 0, [player2Id]: 0 }
+  };
+  newMatchRef.set(match).then(() => {
+    document.getElementById("opponentEmail").textContent = opponentEmail || player2Id;
+    startGame();
+  });
+}
+
+function startGame() {
+  gameStarted = true;
+  document.getElementById("waitingScreen").style.display = "none";
+  document.getElementById("gameScreen").style.display = "flex";
+  database.ref(`matches/${matchId}/status`).set('active');
+  roomSound.pause();
+  database.ref(`waitingRoom/${userId}`).remove();
+  document.getElementById("timeIndicator").textContent = "Shoot as many zombies as you can!";
+  initCanvas();
+  gameLoop();
+
+  database.ref(`matches/${matchId}/scores`).on('value', snapshot => {
+    if (snapshot.exists()) {
+      const scores = snapshot.val();
+      if (scores[userId]) {
+        playerScore = scores[userId];
+        document.getElementById("playerScore").textContent = playerScore;
+      }
+      if (scores[opponentId]) {
+        opponentScore = scores[opponentId];
+        document.getElementById("opponentScore").textContent = opponentScore;
+      }
+    }
+  });
+
+  startGameTimer();
+  zombieInterval = setInterval(spawnZombies, 1500);
+}
+
+function startGameTimer() {
+  gameInterval = setInterval(() => {
+    gameTimer--;
+    document.getElementById("gameTimer").textContent = "Time: " + gameTimer;
+    if (gameTimer <= 0) {
+      clearInterval(gameInterval);
+      clearInterval(zombieInterval);
+      endGame();
+    }
+  }, 1000);
+}
+
+function endGame() {
+  document.getElementById("gameScreen").style.display = "none";
+  document.getElementById("resultScreen").style.display = "flex";
+  document.getElementById("finalPlayerScore").textContent = playerScore;
+  document.getElementById("finalOpponentScore").textContent = opponentScore;
+  let resultMessage;
+
+  if (playerScore > opponentScore) {
+    resultMessage = "Congratulations! You Won!";
+    winSound.play().catch(e => console.log(e));
+    fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "awardWinnings", email: userEmail, entryFee: entryFee }) })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === "success") {
+        alert("You Won " + data.winningAmount + " Coins!");
+        let userProfit = parseInt(data.winningAmount) - parseInt(entryFee);
+        saveResult(userEmail, entryFee, userProfit, "Won");
+        saveResult(opponentEmail, entryFee, -parseInt(entryFee), "Lose");
+      }
+    });
+  } else if (playerScore < opponentScore) {
+    resultMessage = "You Lost. Better luck next time!";
+    lossSound.play().catch(e => console.log(e));
+    fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "awardWinnings", email: opponentEmail, entryFee: entryFee }) })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === "success") {
+        alert("Opponent Won " + data.winningAmount + " Coins!");
+        let oppProfit = parseInt(data.winningAmount) - parseInt(entryFee);
+        saveResult(userEmail, entryFee, -parseInt(entryFee), "Lose");
+        saveResult(opponentEmail, entryFee, oppProfit, "Won");
+      }
+    });
+  } else {
+    resultMessage = "It's a Tie!";
+    saveResult(userEmail, entryFee, 0, "Tie");
+    saveResult(opponentEmail, entryFee, 0, "Tie");
+    fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "refundCoins", email: userEmail, entryFee: entryFee }) });
+    fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "refundCoins", email: opponentEmail, entryFee: entryFee }) });
+  }
+  
+  document.getElementById("resultMessage").textContent = resultMessage;
+  setTimeout(() => database.ref("matches/" + matchId).remove(), 3000);
+}
+
+function saveResult(email, entryFee, profit, status) {
+  fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "saveResult", email: email, entryFee: entryFee, profit: profit, status: status, gameName: gameName }) });
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (!gameStarted) roomSound.pause(); } 
+  else { if (!gameStarted) roomSound.play().catch(e => console.log(e)); }
+});
+
+window.addEventListener('beforeunload', () => {
+  roomSound.pause();
+  winSound.pause();
+  lossSound.pause();
+  shootSound.pause();
+  if (matchId) database.ref("matches/" + matchId).remove();
+});
+
+joinWaitingRoom();
+</script>

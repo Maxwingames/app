@@ -1,0 +1,98 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="loader.css">
+<style>
+    body { background: #fff; color: #333; }
+    .image { margin: 0; gap: 5px; } 
+    .image > p > span { font-weight: 500; font-size: 26px; }
+    .user > img { width: 120px; }
+    .user > p { font-size: 20px; font-weight: 400; gap: 0px; }
+    .image , .user > p { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .user { background: radial-gradient(circle, lightblue 0%, darkblue 40%); width: 100%; display: flex; flex-direction: column; align-items: center; height: 240px; justify-content: center; color: #fff; margin: -50px 0 0 0; padding: 50px 0 0 0; border-radius: 12px;  }
+    .buttons { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 20px; }
+    .buttons > a { width: 70px; background: #00008b; border-radius: 12px; color: #fff; font-size: 14px; text-decoration: none; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 10px; gap: 5px; }
+    .buttons > a > i { font-size: 25px; padding: 15px; border-radius: 125px; background: #eee; color: #00008b; }
+</style>
+<div id="loader" style="display: flex;"><div class="loader"></div></div>
+<div id="userInfo" style="display: none;"></div>
+<script>
+    function fetchUserData() {
+        const email = localStorage.getItem("quiz_local");
+        if (!email) {
+            window.location.href = "login.html";
+            return;
+        }
+        
+        fetch("https://script.google.com/macros/s/AKfycbw65DyS4bBul6nYj4dpIRbNOujU7tLqNk8TQC0KaJWv8TdHmE8LMLkAnIZBj83bH63M/exec", { method: "POST", body: JSON.stringify({ email }) })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("loader").style.display = "none";
+            document.getElementById("userInfo").style.display = "block";
+            
+            if (data.name) {
+                document.getElementById("userInfo").innerHTML = 
+                    `
+                    <div class="image">
+                        <div class="user">
+                        <img src="https://icons.veryicon.com/png/o/business/multi-color-financial-and-business-icons/user-139.png">
+                        <p>Welcome, <span>${data.name}</span></p>
+                        </div>
+                    <div>
+                    <div class="buttons">
+                        <a href="add_coins.html">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add Coins</span>
+                        </a>
+                        <a href="transfer.html">
+                            <i class="fa-solid fa-coins"></i>
+                            <span>Transfer</span>
+                        </a>
+                        <a href="result.html">
+                            <i class="fa-solid fa-person-rifle"></i>
+                            <span>Matches</span>
+                        </a>
+                    </div>
+                    <div class="buttons">
+                        <a href="add_coins.html">
+                            <i class="fa-solid fa-headphones-simple"></i>
+                            <span>Support</span>
+                        </a>
+                        <a href="transfer.html">
+                            <i class="fa-brands fa-telegram"></i>
+                            <span>Telegram</span>
+                        </a>
+                        <a href="result.html">
+                            <i class="fa-brands fa-youtube"></i>
+                            <span>Youtube</span>
+                        </a>
+                    </div>
+                    <div class="buttons">
+                        <a href="withdraw.html">
+                            <i class="fa-solid fa-database"></i>
+                            <span>Withdraw</span>
+                        </a>
+                        <a href="withdraw_history.html">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>History</span>
+                        </a>
+                        <a onclick="logout()">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Logout</span>
+                        </a>
+                    </div>`;
+            } else {
+                localStorage.removeItem("quiz_local");
+                window.location.href = "login.html";
+            }
+        });
+    }
+
+    function logout() {
+        localStorage.removeItem("quiz_local");
+        window.location.href = "login.html";
+    }
+
+    fetchUserData();
+</script>

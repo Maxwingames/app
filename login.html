@@ -1,0 +1,67 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="loader.css">
+<link rel="stylesheet" href="style.css">
+<style>
+    .image { background: linear-gradient(45deg , #0000ff , #800080); margin: -50px 0 0 0; padding: 50px 0 0 0; border-radius: 12px; }
+    body { background: #fff; color: #333; }
+    .int { background: #eee; color: #333; font-weight: 450; }
+    .int::placeholder { color: #333; font-weight: 450; }
+    .link { font-weight: 500; }
+    .link > a { font-weight: 700; color: #333; text-decoration: underline; }
+</style>
+<div class="image">
+    <img src="https://i.ibb.co/32XQgch/login.png">
+</div>
+<div class="form">
+    <h2 class="form-h2">Login</h2>
+    <p class="form-p">Login For Make Pocket Money</p>
+    <input type="number" id="mobile" placeholder="Mobile: " class="int" required>
+    <input type="password" id="password" placeholder="Password: " class="int" required>
+    <button onclick="loginUser()" class="btn" type="submit"><i class="fa-solid fa-lock"></i> Login</button>
+    <p class="link">Don't Have Account? <a href="signup.html">Signup</a></p>
+</div>
+<div id="loader" style="display: none;"><div class="loader"></div></div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        if (localStorage.getItem("quiz_local")) {
+            window.location.href = "index.html";
+        }
+    });
+
+    function loginUser() {
+        var mobile = document.getElementById("mobile").value;
+        var password = document.getElementById("password").value;
+        var loader = document.getElementById("loader");
+
+        if (!mobile || !password) {
+            alert("Please enter mobile number and password.");
+            return;
+        }
+
+        loader.style.display = "flex";
+
+        fetch("https://script.google.com/macros/s/AKfycbwTFtxWqpHBSbsylrHt7o-2mDaFkigrwHaUQm1d6WwTJllhcOcb9EVSpBM5E0L5uhgU/exec", {
+            method: "POST",
+            body: JSON.stringify({ action: "login", mobile: mobile, password: password }),
+        })
+        .then(response => response.text())
+        .then(data => {
+            loader.style.display = "none";
+            if (data === "Banned") {
+                alert("Your account has been banned.");
+                localStorage.removeItem("quiz_local");
+            } else if (data.startsWith("Success:")) {
+                localStorage.setItem("quiz_local", data.split(":")[1]);
+                window.location.href = "index.html";
+            } else {
+                alert(data);
+            }
+        })
+        .catch(error => {
+            loader.style.display = "none";
+            console.error("Error:", error);
+        });
+    }
+</script>

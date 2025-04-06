@@ -1,0 +1,97 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="loader.css">
+<link rel="stylesheet" href="style.css">
+<style>
+    body { color: #333; }
+    .status-processing { background-color: #ffa500; color: #fff; }
+    .status-approve { background-color: #008000; color: #fff; }
+    .status-reject { background-color: #ff0000; color: #fff; }
+    .status-processing, .status-reject, .status-approve {
+        text-align: center;
+        font-weight: 400;
+        padding: 5px;
+        border-radius: 125px;
+    }
+    #withdrawContainer { display: flex; flex-direction: column; padding: 10px; gap: 10px; }
+    .card { display: flex; gap: 10px; flex-direction: column; padding: 10px; background: #eee; border-radius: 12px; box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px; }
+    .form { text-align: center; }
+    #withdrawContainer > p { position: fixed; width: 100%; top: 50%; text-align: center; }
+</style>
+<div class="form">
+    <h2>Withdrawal History</h2>
+</div>
+<hr>
+<div id="loader"><div class="loader"></div></div>
+<div id="withdrawContainer" class="container"></div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let email = localStorage.getItem("quiz_local");
+        if (!email) {
+            alert("No user logged in!");
+            window.location.href = "index.html";
+            return;
+        }
+
+        document.getElementById("loader").style.display = "flex";
+
+        fetch("https://script.google.com/macros/s/AKfycbxJplkZIdeMSNPRO2iVqoy1sQz7ltUKQHOu5hQDvoK691LLKAiWThQ1q2IORF2tZvB8/exec", {
+            method: "POST",
+            body: JSON.stringify({ action: "getWithdrawals", email })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("loader").style.display = "none";
+            let container = document.getElementById("withdrawContainer");
+            container.innerHTML = "";
+
+            if (data.length === 0) {
+                container.innerHTML = "<p>No withdrawals found.</p>";
+                return;
+            }
+
+            data.forEach(row => {
+                let card = document.createElement("div");
+                card.classList.add("card");
+
+                let upiId = document.createElement("div");
+                upiId.classList.add("upi-id");
+                upiId.textContent = `UPI ID: ${row.upiId}`;
+
+                let amount = document.createElement("div");
+                amount.classList.add("amount");
+                amount.textContent = `Withdraw Amount: ₹${row.amount}`;
+
+                let actualAmount = document.createElement("div");
+                actualAmount.classList.add("actual-amount");
+                actualAmount.textContent = `Actual Amount: ₹${row.actualAmount}`;
+
+                let status = document.createElement("div");
+                status.classList.add("status");
+                
+                if (row.status === "Accepted") {
+                    status.classList.add("status-approve");
+                    status.textContent = "Accepted";
+                } else if (row.status === "Rejected") {
+                    status.classList.add("status-reject");
+                    status.textContent = "Rejected";
+                } else {
+                    status.classList.add("status-processing");
+                    status.textContent = "Processing";
+                }
+
+                card.appendChild(upiId);
+                card.appendChild(amount);
+                card.appendChild(actualAmount);
+                card.appendChild(status);
+
+                container.appendChild(card);
+            });
+        })
+        .catch(error => {
+            document.getElementById("loader").style.display = "none";
+            console.error("Error fetching withdrawal data:", error);
+            alert("Error loading withdrawals.");
+        });
+    });
+</script>

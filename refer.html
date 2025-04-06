@@ -1,0 +1,82 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="loader.css">
+<link rel="stylesheet" href="style.css">
+<style>
+    #loader { display: flex; }
+    #referContainer { display: none; align-items: center; justify-content: center; margin: 10px 0px; flex-direction: column; gap: 10px; }
+    .refer-hero { display: flex; gap: 10px; }
+    .image { background: linear-gradient(45deg , #0000ff , #800080); margin: -50px 0 0 0; padding: 50px 0 0 0; display: flex; align-items: center; justify-content: center; height: 40%; }
+    body { background: #fff; color: #333; }
+    span { text-align: center; margin: 10px 20px; }
+    #referCode { background: #eee; padding: 10px 30px; border-radius: 125px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+    .btn { font-size: 22px; width: 50px; height: 50px; } 
+    .refer-btn { background: #28a745; color: white; padding: 15px 20px; border-radius: 50px; font-size: 18px; font-weight: bold; border: none; cursor: pointer; margin-top: 10px; }
+</style>
+<div id="loader"><div class="loader"></div></div>
+<div class="image">
+    <img src="https://i.ibb.co/Fb2NmJFr/refer.png">
+</div>
+<div id="referContainer">
+    <h2>Referral Code</h2>
+    <span>Unlock exclusive rewards! Use my referral code and receive 20 coins instantly. Start your journey with bonus benefits today!</span>
+    <div class="refer-hero">
+        <p id="referCode"></p>
+        <button onclick="copyReferCode()" class="btn"><i class="fa-solid fa-copy"></i></button>
+    </div>
+    <div class="refer">
+        <button onclick="shareReferCode()" class="refer-btn">Refer Now</button>
+    </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const userEmail = localStorage.getItem("quiz_local");
+        if (!userEmail) {
+            document.getElementById("loader").innerText = "No email found in local storage.";
+            return;
+        }
+        fetch("https://script.google.com/macros/s/AKfycbyrf-bQrS8K_8NtfuTg9JttP0hEah-6spbbgtnDj2R2i3UpIFxYRWoaUQyjuZe3BtIk/exec?email=" + encodeURIComponent(userEmail))
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("loader").style.display = "none";
+                if (data.referCode) {
+                    document.getElementById("referCode").innerText = data.referCode;
+                    document.getElementById("referContainer").style.display = "flex";
+                } else {
+                    document.getElementById("loader").innerText = "Email not found in Users sheet.";
+                }
+            })
+            .catch(error => {
+                document.getElementById("loader").innerText = "Error fetching referral code.";
+            });
+    });
+
+    function copyReferCode() {
+        const referText = document.getElementById("referCode").innerText;
+        navigator.clipboard.writeText(referText).then(() => {
+            alert("Referral Code Copied!");
+        });
+    }
+
+    function shareReferCode() {
+        const referText = document.getElementById("referCode").innerText;
+        const message = `🌟 Join me on this amazing platform and get rewarded instantly! 
+        
+🎉 Use my referral code: ${referText} and earn daily. 
+💰 Don't miss out on this opportunity to earn exciting rewards while enjoying great benefits.
+
+Download and join now: https://yourwebsite.com 
+
+Let's earn together and unlock exclusive perks! 🚀🔥`;
+        if (navigator.share) {
+            navigator.share({ text: message })
+                .then(() => console.log("Shared successfully"))
+                .catch(error => console.log("Sharing failed:", error));
+        } else {
+            navigator.clipboard.writeText(message).then(() => {
+                alert("Referral message copied! Share it with your friends.");
+            });
+        }
+    }
+</script>
