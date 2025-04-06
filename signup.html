@@ -18,17 +18,12 @@
 <div id="registrationForm" class="form">
     <h2 class="form-h2">Signup</h2>
     <p class="form-p">Signup For Start Earning.</p>
-    <input type="text" id="name" class="int" name="name" placeholder="Full Name: " class="int" required>
-    <input type="email" id="email" class="int" name="email" placeholder="Email: " required>
-    <input type="number" id="mobile" class="int" placeholder="Mobile: " name="mobile" required>
-    <input type="password" id="password" class="int" placeholder="Password: " name="password" required>
-    <input type="text" id="referralCode" class="int" placeholder="Referral Code (Optional): " name="referralCode">
-    <button type="button" id="getOtpBtn" class="btn"><i class="fa-solid fa-unlock"></i> Get OTP</button>
-</div>
-
-<div id="otpSection" style="display:none;" class="form">
-    <input type="text" id="otp" name="otp" class="int" placeholder="Enter OTP:" required>
-    <button type="button" id="submitBtn" class="btn"><i class="fa-solid fa-key"></i> Submit</button>
+    <input type="text" id="name" class="int" name="name" placeholder="Full Name:" required>
+    <input type="email" id="email" class="int" name="email" placeholder="Email:" required>
+    <input type="number" id="mobile" class="int" placeholder="Mobile:" name="mobile" required>
+    <input type="password" id="password" class="int" placeholder="Password:" name="password" required>
+    <input type="text" id="referralCode" class="int" placeholder="Referral Code (Optional):" name="referralCode">
+    <button type="button" id="submitBtn" class="btn"><i class="fa-solid fa-user-plus"></i> Signup</button>
 </div>
 <div class="form">
     <p class="link">Already Have Account? <a href="login.html">Login</a></p>
@@ -46,58 +41,37 @@
         document.getElementById("loader").style.display = "none";
     }
 
-    document.getElementById("getOtpBtn").addEventListener("click", function() {
-        const email = document.getElementById("email").value;
-        const mobile = document.getElementById("mobile").value;
-
-        if (!email || !mobile) {
-            alert("Please enter your email and mobile number.");
-            return;
-        }
-
-        showLoader();
-        
-        fetch("https://script.google.com/macros/s/AKfycbwk0JwlMXD93pg_wJI8sc_O3UDCGAqT7JIkzz_RgiVxr9sw470CcaLY1s9bG-0ws0TG/exec", {
-            method: "POST",
-            body: JSON.stringify({ action: "sendOTP", email, mobile })
-        })
-        .then(response => response.text())
-        .then((result) => {
-            hideLoader();
-            if (result === "Email Exists") {
-                alert("This Email is already registered!");
-            } else if (result === "Mobile Exists") {
-                alert("This Mobile number is already registered!");
-            } else {
-                alert("OTP Sent to your Email!");
-                document.getElementById("otpSection").style.display = "flex";
-            }
-        });
-    });
-
     document.getElementById("submitBtn").addEventListener("click", function() {
         const name = document.getElementById("name").value;
         const email = document.getElementById("email").value;
         const mobile = document.getElementById("mobile").value;
         const password = document.getElementById("password").value;
-        const otp = document.getElementById("otp").value;
         const referralCode = document.getElementById("referralCode").value;
+
+        if (!name || !email || !mobile || !password) {
+            alert("Please fill all required fields.");
+            return;
+        }
 
         showLoader();
 
-        fetch("https://script.google.com/macros/s/AKfycbwk0JwlMXD93pg_wJI8sc_O3UDCGAqT7JIkzz_RgiVxr9sw470CcaLY1s9bG-0ws0TG/exec", {
+        fetch("https://script.google.com/macros/s/AKfycbxl2-Zy_bMi7hu6XQT1VVg6uQVQQAZ0rwv5Cn4a4TWeHInDKvAiC6SLpxDziC7F_dGt/exec", {
             method: "POST",
-            body: JSON.stringify({ action: "verifyAndRegister", name, email, mobile, password, otp, referralCode })
+            body: JSON.stringify({ action: "registerUser", name, email, mobile, password, referralCode })
         })
         .then(response => response.text())
         .then(result => {
             hideLoader();
-            if (result === "Registered") {
+            if (result === "Email Exists") {
+                alert("This Email is already registered!");
+            } else if (result === "Mobile Exists") {
+                alert("This Mobile number is already registered!");
+            } else if (result === "Registered") {
                 localStorage.setItem("quiz_local", email);
                 alert("Registration Successful!");
                 window.location.href = "index.html";
             } else {
-                alert("Invalid OTP!");
+                alert("Something went wrong. Try again.");
             }
         });
     });
