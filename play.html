@@ -85,6 +85,9 @@ let canvas, ctx;
 let waitingInterval;
 let gameInterval;
 let zombieInterval;
+let botInterval;
+let botMode = false;
+const botNames = ["ZombieBot", "DeadHunter", "ZombieSlayer", "DeadEye", "BrainEater"];
 
 class Zombie {
   constructor(type, x, y) {
@@ -215,7 +218,7 @@ function joinWaitingRoom() {
     });
   });
   
-  let waitingTime = 20;
+  let waitingTime = 15;
   document.getElementById("waitingTime").textContent = waitingTime;
   waitingInterval = setInterval(() => {
     waitingTime--;
@@ -226,15 +229,17 @@ function joinWaitingRoom() {
   setTimeout(() => {
     if (!gameStarted) {
       database.ref(`waitingRoom/${userId}`).remove().then(() => {
-        fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "refundCoins", email: userEmail, entryFee: entryFee }) })
-        .then(response => response.json())
-        .then(data => {
-          alert("Match Not Found.");
-          window.location.href = "index.html";
-        });
+        startBotMatch();
       });
     }
-  }, 20000);
+  }, 15000);
+}
+
+function startBotMatch() {
+  botMode = true;
+  opponentId = "bot_" + Date.now();
+  opponentEmail = botNames[Math.floor(Math.random() * botNames.length)];
+  createMatch(userId, opponentId);
 }
 
 function listenForMatches() {
@@ -246,12 +251,18 @@ function listenForMatches() {
       Object.keys(match.players).forEach(playerId => {
         if (playerId !== userId) {
           opponentId = playerId;
-          database.ref(`waitingRoom/${opponentId}`).once('value', snapshot => {
-            if (snapshot.exists()) opponentEmail = snapshot.val().email;
-            document.getElementById("opponentEmail").textContent = opponentEmail || opponentId;
+          if (playerId.startsWith('bot_')) {
+            document.getElementById("opponentEmail").textContent = opponentEmail;
             clearInterval(waitingInterval);
             startGame();
-          });
+          } else {
+            database.ref(`waitingRoom/${opponentId}`).once('value', snapshot => {
+              if (snapshot.exists()) opponentEmail = snapshot.val().email;
+              document.getElementById("opponentEmail").textContent = opponentEmail || opponentId;
+              clearInterval(waitingInterval);
+              startGame();
+            });
+          }
         }
       });
     }
@@ -301,8 +312,21 @@ function startGame() {
     }
   });
 
+  if (botMode) {
+    simulateBotPlay();
+  }
+
   startGameTimer();
   zombieInterval = setInterval(spawnZombies, 1500);
+}
+
+function simulateBotPlay() {
+  botInterval = setInterval(() => {
+    const botIncrement = Math.floor(Math.random() * 15) + 10;
+    opponentScore += botIncrement;
+    database.ref(`matches/${matchId}/scores/${opponentId}`).set(opponentScore);
+    document.getElementById("opponentScore").textContent = opponentScore;
+  }, 1000);
 }
 
 function startGameTimer() {
@@ -312,6 +336,7 @@ function startGameTimer() {
     if (gameTimer <= 0) {
       clearInterval(gameInterval);
       clearInterval(zombieInterval);
+      if (botMode) clearInterval(botInterval);
       endGame();
     }
   }, 1000);
@@ -320,11 +345,21 @@ function startGameTimer() {
 function endGame() {
   document.getElementById("gameScreen").style.display = "none";
   document.getElementById("resultScreen").style.display = "flex";
+  
+  if (botMode) {
+    opponentScore = playerScore + 50;
+    document.getElementById("opponentScore").textContent = opponentScore;
+  }
+  
   document.getElementById("finalPlayerScore").textContent = playerScore;
   document.getElementById("finalOpponentScore").textContent = opponentScore;
   let resultMessage;
 
-  if (playerScore > opponentScore) {
+  if (botMode) {
+    resultMessage = "You Lost. Better luck next time!";
+    lossSound.play().catch(e => console.log(e));
+    saveResult(userEmail, entryFee, -parseInt(entryFee), "Lose");
+  } else if (playerScore > opponentScore) {
     resultMessage = "Congratulations! You Won!";
     winSound.play().catch(e => console.log(e));
     fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "awardWinnings", email: userEmail, entryFee: entryFee }) })
