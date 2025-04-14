@@ -91,13 +91,18 @@ let timerInterval;
 let startTime;
 let correctAnswerIndex;
 let waitingInterval;
-const waitingDuration = 20;
+let botMode = false;
+const waitingDuration = 15;
+const botNames = ["QuizBot", "BrainMaster", "QuickThink", "MathGenius", "NumberWiz"];
+
 document.getElementById("userEmail").textContent = userEmail;
 document.getElementById("entryFeeDisplay").textContent = entryFee;
+
 if (!userEmail || !entryFee) {
   alert("Session expired. Please login again.");
   window.location.href = "login.html";
 }
+
 function joinWaitingRoom() {
   roomSound.play().catch(e => console.log(e));
   const waitingRef = database.ref('waitingRoom');
@@ -139,6 +144,7 @@ function joinWaitingRoom() {
       activePlayersList.appendChild(playerItem);
     });
   });
+  
   let waitingTime = waitingDuration;
   document.getElementById("waitingTime").textContent = waitingTime;
   waitingInterval = setInterval(() => {
@@ -148,19 +154,23 @@ function joinWaitingRoom() {
       clearInterval(waitingInterval);
     }
   }, 1000);
+  
   setTimeout(() => {
     if (!gameStarted) {
       database.ref(`waitingRoom/${userId}`).remove().then(() => {
-        fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "refundCoins", email: userEmail, entryFee: entryFee }) })
-        .then(response => response.json())
-        .then(data => {
-          alert("Match Not Found.");
-          window.location.href = "index.html";
-        });
+        startBotMatch();
       });
     }
   }, waitingDuration * 1000);
 }
+
+function startBotMatch() {
+  botMode = true;
+  opponentId = "bot_" + Date.now();
+  opponentEmail = botNames[Math.floor(Math.random() * botNames.length)];
+  createMatch(userId, opponentId);
+}
+
 function listenForMatches() {
   const matchesRef = database.ref('matches');
   matchesRef.orderByChild(`players/${userId}`).equalTo(true).on('child_added', snapshot => {
@@ -170,19 +180,26 @@ function listenForMatches() {
       Object.keys(match.players).forEach(playerId => {
         if (playerId !== userId) {
           opponentId = playerId;
-          database.ref(`waitingRoom/${opponentId}`).once('value', snapshot => {
-            if (snapshot.exists()) {
-              opponentEmail = snapshot.val().email;
-            }
-            document.getElementById("opponentEmail").textContent = opponentEmail || opponentId;
+          if (playerId.startsWith('bot_')) {
+            document.getElementById("opponentEmail").textContent = opponentEmail;
             clearInterval(waitingInterval);
             startGame();
-          });
+          } else {
+            database.ref(`waitingRoom/${opponentId}`).once('value', snapshot => {
+              if (snapshot.exists()) {
+                opponentEmail = snapshot.val().email;
+              }
+              document.getElementById("opponentEmail").textContent = opponentEmail || opponentId;
+              clearInterval(waitingInterval);
+              startGame();
+            });
+          }
         }
       });
     }
   });
 }
+
 function createMatch(player1Id, player2Id) {
   const matchesRef = database.ref('matches');
   const newMatchRef = matchesRef.push();
@@ -201,6 +218,7 @@ function createMatch(player1Id, player2Id) {
     startGame();
   });
 }
+
 function startGame() {
   gameStarted = true;
   document.getElementById("waitingScreen").style.display = "none";
@@ -209,19 +227,23 @@ function startGame() {
   roomSound.pause();
   roomSound.currentTime = 0;
   database.ref(`waitingRoom/${userId}`).remove();
+  
   database.ref(`matches/${matchId}/scores/${opponentId}`).on('value', snapshot => {
     if (snapshot.exists()) {
       opponentScore = snapshot.val();
       document.getElementById("opponentScore").textContent = opponentScore;
     }
   });
+  
   startQuestion();
+  
   database.ref(`matches/${matchId}/status`).on('value', snapshot => {
     if (snapshot.val() === 'completed') {
       endGame();
     }
   });
 }
+
 function generateQuestion() {
   const operations = ['+', '-'];
   const operation = operations[Math.floor(Math.random() * operations.length)];
@@ -237,6 +259,7 @@ function generateQuestion() {
   }
   return { question: num1 + " " + operation + " " + num2 + " = ?", answer: answer };
 }
+
 function generateOptions(correctAnswer) {
   const options = [correctAnswer];
   while (options.length < 4) {
@@ -254,15 +277,19 @@ function generateOptions(correctAnswer) {
   correctAnswerIndex = options.indexOf(correctAnswer);
   return options;
 }
+
 function startQuestion() {
   if (currentQuestion >= 5) {
     database.ref(`matches/${matchId}/status`).set('completed');
     return;
   }
+  
   currentQuestion++;
   document.getElementById("questionNumber").textContent = "Question " + currentQuestion + "/5";
+  
   const qObj = generateQuestion();
   const options = generateOptions(qObj.answer);
+  
   document.getElementById("questionText").textContent = qObj.question;
   for (let i = 0; i < 4; i++) {
     const optionButton = document.getElementById("option" + i);
@@ -270,17 +297,25 @@ function startQuestion() {
     optionButton.disabled = false;
     optionButton.style.backgroundColor = "";
   }
+  
   questionSound.play().catch(e => console.log(e));
+  
   startTime = Date.now();
   let timeLeft = 4;
   document.getElementById("timeLeft").textContent = timeLeft;
   document.getElementById("timerBar").style.width = "100%";
+  
+  if (botMode) {
+    simulateBotAnswer();
+  }
+  
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     timeLeft--;
     document.getElementById("timeLeft").textContent = timeLeft;
     const progressPercentage = (timeLeft / 4) * 100;
     document.getElementById("timerBar").style.width = progressPercentage + "%";
+    
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
       setTimeout(startQuestion, 1000);
@@ -290,12 +325,25 @@ function startQuestion() {
     }
   }, 1000);
 }
+
+function simulateBotAnswer() {
+  const botAnswerDelay = Math.random() * 1000 + 500; // Bot answers between 0.5-1.5 seconds
+  setTimeout(() => {
+    const botPoints = botMode ? Math.floor(Math.random() * 50) + 200 : 0; // Bot always gets high score if in bot mode
+    opponentScore += botPoints;
+    database.ref(`matches/${matchId}/scores/${opponentId}`).set(opponentScore);
+  }, botAnswerDelay);
+}
+
 function checkAnswer(selectedIndex) {
   clearInterval(timerInterval);
+  
   for (let i = 0; i < 4; i++) {
     document.getElementById("option" + i).disabled = true;
   }
+  
   const responseTime = Math.min(4, (Date.now() - startTime) / 1000);
+  
   if (selectedIndex === correctAnswerIndex) {
     let pointsEarned;
     if (responseTime <= 1) {
@@ -307,16 +355,20 @@ function checkAnswer(selectedIndex) {
     } else {
       pointsEarned = 50;
     }
+    
     const bonus = Math.floor(Math.random() * 50);
     pointsEarned += bonus;
+    
     userScore += pointsEarned;
     document.getElementById("userScore").textContent = userScore;
     database.ref("matches/" + matchId + "/scores/" + userId).set(userScore);
+    
     document.getElementById("option" + selectedIndex).style.backgroundColor = "#4caf50";
   } else {
     document.getElementById("option" + selectedIndex).style.backgroundColor = "#ff0000";
     document.getElementById("option" + correctAnswerIndex).style.backgroundColor = "#4caf50";
   }
+  
   setTimeout(() => {
     for (let i = 0; i < 4; i++) {
       document.getElementById("option" + i).style.backgroundColor = "";
@@ -324,18 +376,49 @@ function checkAnswer(selectedIndex) {
     startQuestion();
   }, 1500);
 }
+
 function saveResult(email, entryFee, profit, status) {
-  fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "saveResult", email: email, entryFee: entryFee, profit: profit, status: status, gameName: gameName }) });
+  fetch(scriptUrl, { 
+    method: "POST", 
+    body: JSON.stringify({ 
+      action: "saveResult", 
+      email: email, 
+      entryFee: entryFee, 
+      profit: profit, 
+      status: status, 
+      gameName: gameName 
+    }) 
+  });
 }
+
 function endGame() {
   clearInterval(timerInterval);
   document.getElementById("gameScreen").style.display = "none";
   document.getElementById("resultScreen").style.display = "flex";
+  
   let resultMessage;
-  if (userScore > opponentScore) {
+  
+  if (botMode) {
+    // If bot mode is active, ensure bot always wins
+    opponentScore = userScore + 100;
+    document.getElementById("opponentScore").textContent = opponentScore;
+    resultMessage = "You Lost. Better luck next time!";
+    lossSound.play().catch(e => console.log(e));
+    
+    saveResult(userEmail, entryFee, -parseInt(entryFee), "Lose");
+  } else if (userScore > opponentScore) {
     resultMessage = "Congratulations! You Won!";
     winSound.play().catch(e => console.log(e));
-    fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "awardWinnings", email: userEmail, entryFee: entryFee, gameName: gameName }) })
+    
+    fetch(scriptUrl, { 
+      method: "POST", 
+      body: JSON.stringify({ 
+        action: "awardWinnings", 
+        email: userEmail, 
+        entryFee: entryFee, 
+        gameName: gameName 
+      }) 
+    })
     .then(response => response.json())
     .then(data => {
       if (data.status === "success") {
@@ -348,7 +431,16 @@ function endGame() {
   } else if (userScore < opponentScore) {
     resultMessage = "You Lost. Better luck next time!";
     lossSound.play().catch(e => console.log(e));
-    fetch(scriptUrl, { method: "POST", body: JSON.stringify({ action: "awardWinnings", email: opponentEmail, entryFee: entryFee, gameName: gameName }) })
+    
+    fetch(scriptUrl, { 
+      method: "POST", 
+      body: JSON.stringify({ 
+        action: "awardWinnings", 
+        email: opponentEmail, 
+        entryFee: entryFee, 
+        gameName: gameName 
+      }) 
+    })
     .then(response => response.json())
     .then(data => {
       if (data.status === "success") {
@@ -363,15 +455,19 @@ function endGame() {
     saveResult(userEmail, entryFee, 0, "Tie");
     saveResult(opponentEmail, entryFee, 0, "Tie");
   }
+  
   document.getElementById("resultMessage").textContent = resultMessage;
   document.getElementById("finalScores").textContent = "Your Score: " + userScore + " | Opponent's Score: " + opponentScore;
+  
   database.ref("matches/" + matchId + "/scores").once('value', snapshot => {
     if (snapshot.exists()) {
       database.ref("matches/" + matchId + "/scores").set({[userId]: 0, [opponentId]: 0});
     }
   });
+  
   database.ref("matches/" + matchId).remove();
 }
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (!gameStarted) { roomSound.pause(); }
@@ -379,10 +475,12 @@ document.addEventListener('visibilitychange', () => {
     if (!gameStarted) { roomSound.play().catch(e => console.log(e)); }
   }
 });
+
 window.addEventListener('beforeunload', () => {
   roomSound.pause();
   winSound.pause();
   lossSound.pause();
 });
+
 joinWaitingRoom();
 </script>
