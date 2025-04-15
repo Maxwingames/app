@@ -30,7 +30,7 @@
   <h3>Match Score!</h3>
   <div id="players">
     <p>You: <span id="userEmail" style="display: none;"></span> - Score: <span id="userScore">0</span></p>
-    <p>Opponent: <span id="opponentEmail" style="display: none;"></span> - Score: <span id="opponentScore">0</span></p>
+    <p style="display: none;">Opponent: <span id="opponentEmail" style="display: none;"></span> - Score: <span id="opponentScore">0</span></p>
   </div>
   <div id="questionContainer">
     <h3 id="questionNumber">Question 1/5</h3>
@@ -327,9 +327,24 @@ function startQuestion() {
 }
 
 function simulateBotAnswer() {
-  const botAnswerDelay = Math.random() * 1000 + 500; // Bot answers between 0.5-1.5 seconds
+  const botAnswerDelay = Math.random() * 1000 + 500; 
   setTimeout(() => {
-    const botPoints = botMode ? Math.floor(Math.random() * 50) + 200 : 0; // Bot always gets high score if in bot mode
+    const botCorrectAnswer = Math.random() < 0.7; 
+    let botPoints = 0;
+    
+    if (botCorrectAnswer) {
+      const responseTime = Math.random() * 3 + 1;
+      if (responseTime <= 1) {
+        botPoints = Math.floor(Math.random() * 30) + 20;
+      } else if (responseTime <= 2) {
+        botPoints = Math.floor(Math.random() * 30) + 10;
+      } else if (responseTime <= 3) {
+        botPoints = Math.floor(Math.random() * 20) + 5;
+      } else {
+        botPoints = Math.floor(Math.random() * 10) + 5;
+      }
+    }
+    
     opponentScore += botPoints;
     database.ref(`matches/${matchId}/scores/${opponentId}`).set(opponentScore);
   }, botAnswerDelay);
@@ -399,14 +414,31 @@ function endGame() {
   let resultMessage;
   
   if (botMode) {
-    // If bot mode is active, ensure bot always wins
-    opponentScore = userScore + 100;
-    document.getElementById("opponentScore").textContent = opponentScore;
-    resultMessage = "You Lost. Better luck next time!";
-    lossSound.play().catch(e => console.log(e));
+    if (opponentEmail === "QuizBot") {
+      opponentScore = 50;
+      userScore = 100;
+    } else if (opponentEmail === "BrainMaster") {
+      opponentScore = 23;
+      userScore = 75;
+    } else if (opponentEmail === "QuickThink") {
+      opponentScore = 50;
+      userScore = 20;
+    } else if (opponentEmail === "MathGenius") {
+      opponentScore = 100;
+      userScore = 50;
+    } else if (opponentEmail === "NumberWiz") {
+      opponentScore = 149;
+      userScore = 75;
+    }
     
-    saveResult(userEmail, entryFee, -parseInt(entryFee), "Lose");
-  } else if (userScore > opponentScore) {
+    document.getElementById("opponentScore").textContent = opponentScore;
+    document.getElementById("userScore").textContent = userScore;
+    
+    database.ref(`matches/${matchId}/scores/${opponentId}`).set(opponentScore);
+    database.ref(`matches/${matchId}/scores/${userId}`).set(userScore);
+  }
+  
+  if (userScore > opponentScore) {
     resultMessage = "Congratulations! You Won!";
     winSound.play().catch(e => console.log(e));
     
@@ -425,39 +457,46 @@ function endGame() {
         alert("You Won " + data.winningAmount + " Coins!");
         let userProfit = parseInt(data.winningAmount) - parseInt(entryFee);
         saveResult(userEmail, entryFee, userProfit, "Won");
-        saveResult(opponentEmail, entryFee, -parseInt(entryFee), "Lose");
+        if (!botMode) {
+          saveResult(opponentEmail, entryFee, -parseInt(entryFee), "Lose");
+        }
       }
     });
   } else if (userScore < opponentScore) {
     resultMessage = "You Lost. Better luck next time!";
     lossSound.play().catch(e => console.log(e));
     
-    fetch(scriptUrl, { 
-      method: "POST", 
-      body: JSON.stringify({ 
-        action: "awardWinnings", 
-        email: opponentEmail, 
-        entryFee: entryFee, 
-        gameName: gameName 
-      }) 
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.status === "success") {
-        alert("Opponent Won " + data.winningAmount + " Coins!");
-        let oppProfit = parseInt(data.winningAmount) - parseInt(entryFee);
-        saveResult(userEmail, entryFee, -parseInt(entryFee), "Lose");
-        saveResult(opponentEmail, entryFee, oppProfit, "Won");
-      }
-    });
+    if (!botMode) {
+      fetch(scriptUrl, { 
+        method: "POST", 
+        body: JSON.stringify({ 
+          action: "awardWinnings", 
+          email: opponentEmail, 
+          entryFee: entryFee, 
+          gameName: gameName 
+        }) 
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("Opponent Won " + data.winningAmount + " Coins!");
+          let oppProfit = parseInt(data.winningAmount) - parseInt(entryFee);
+          saveResult(opponentEmail, entryFee, oppProfit, "Won");
+        }
+      });
+    }
+    
+    saveResult(userEmail, entryFee, -parseInt(entryFee), "Lose");
   } else {
     resultMessage = "It's a Tie!";
     saveResult(userEmail, entryFee, 0, "Tie");
-    saveResult(opponentEmail, entryFee, 0, "Tie");
+    if (!botMode) {
+      saveResult(opponentEmail, entryFee, 0, "Tie");
+    }
   }
   
   document.getElementById("resultMessage").textContent = resultMessage;
-  document.getElementById("finalScores").textContent = "Your Score: " + userScore + " | Opponent's Score: " + opponentScore;
+  document.getElementById("finalScores").textContent = "Opponent's Score: " + opponentScore;
   
   database.ref("matches/" + matchId + "/scores").once('value', snapshot => {
     if (snapshot.exists()) {
